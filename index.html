@@ -305,14 +305,16 @@
                                 </div>
 
                                 <!-- Add Item Input -->
-                                <div class="mt-2 flex items-center gap-2 px-2 pb-1">
-                                    <i class="fas fa-plus text-slate-300 text-xs"></i>
+                                <div class="mt-2 flex items-center gap-3 px-2 pb-2 pt-1 border-t border-slate-100/50">
+                                    <!-- Visual cue: dashed box to represent a future checkbox -->
+                                    <div class="w-5 h-5 border-2 border-dashed border-slate-300 rounded flex-shrink-0"></div>
                                     <input 
                                         type="text" 
-                                        placeholder="新增項目..." 
-                                        class="flex-1 bg-transparent text-sm outline-none placeholder-slate-400 text-slate-700"
+                                        placeholder="新增項目 (按 Enter)..." 
+                                        class="flex-1 bg-transparent text-sm outline-none placeholder-slate-400 text-slate-700 h-8"
                                         @keydown.enter="addPackingItem(catIndex, $event)"
                                     >
+                                    <i class="fas fa-level-down-alt transform rotate-90 text-slate-300 text-xs"></i>
                                 </div>
                             </div>
                         </div>
@@ -711,13 +713,6 @@
                         </div>
                     </div>
                 </div>
-
-                <!-- Reset Data Button -->
-                <div class="mt-8 mb-4 text-center">
-                    <button @click="resetAllData" class="text-xs text-slate-400 hover:text-rose-500 underline decoration-slate-300 hover:decoration-rose-300 transition-colors">
-                        <i class="fas fa-redo-alt mr-1"></i> 重置所有資料 (恢復預設值)
-                    </button>
-                </div>
             </div>
 
             <!-- Tab 3: Shopping -->
@@ -844,7 +839,7 @@
                 <h3 class="text-lg font-bold mb-4 text-slate-800">{{ isEditingShopping ? '編輯商品' : '新增商品' }}</h3>
                 <div class="space-y-4">
                     <div>
-                        <label class="block text-xs font-bold text-slate-400 mb-1">商品名稱</label>
+                        <label class="block text-xs font-bold text-slate-400 mb-1">商品名稱 <span class="text-rose-500">*</span></label>
                         <input v-model="shoppingForm.name" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:border-sky-400 outline-none" placeholder="例如：白色戀人">
                     </div>
                     <div>
@@ -930,10 +925,12 @@
 
                 const toggleMusic = () => {
                     if (!bgmAudio.value) return;
+                    
                     if (isMusicPlaying.value) {
                         bgmAudio.value.pause();
                         isMusicPlaying.value = false;
                     } else {
+                        // Handle browser autoplay policy
                         bgmAudio.value.play().then(() => {
                             isMusicPlaying.value = true;
                         }).catch(e => {
@@ -942,83 +939,6 @@
                         });
                     }
                 };
-
-                // --- STORAGE LOGIC ---
-                const STORAGE_KEY_PREFIX = 'hokkaido_trip_';
-                
-                const loadFromStorage = (key, defaultValue) => {
-                    const stored = localStorage.getItem(STORAGE_KEY_PREFIX + key);
-                    return stored ? JSON.parse(stored) : defaultValue;
-                };
-
-                const saveToStorage = (key, value) => {
-                    localStorage.setItem(STORAGE_KEY_PREFIX + key, JSON.stringify(value));
-                };
-
-                const resetAllData = () => {
-                    if(confirm("確定要重置所有資料嗎？所有的修改都會消失並恢復成預設值。")) {
-                        localStorage.clear();
-                        window.location.reload();
-                    }
-                };
-
-                // --- DATA DEFINITIONS (Defaults) ---
-                const defaultScheduleData = [
-                    { date: '22', weekday: 'Mon', items: [{id:1, category:'flight', categoryLabel:'航班', name:'抵達新千歲', startTime:'10:35', note:'NH055'}] },
-                    { date: '23', weekday: 'Tue', items: [{id:2, category:'sightseeing', categoryLabel:'景點', name:'小樽運河', startTime:'10:00', note:'拍照', mapLink:'https://maps.app.goo.gl/otaru'}] },
-                    { date: '24', weekday: 'Wed', items: [] },
-                    { date: '25', weekday: 'Thu', items: [{id:5, category:'food', categoryLabel:'美食', name:'HOUSE.H 聖誕晚餐', startTime:'18:00', note:'赤れんが庁舎 1F'}] },
-                    { date: '26', weekday: 'Fri', items: [] },
-                    { date: '27', weekday: 'Sat', items: [{id:3, category:'sightseeing', categoryLabel:'景點', name:'一日團集合', startTime:'07:50', note:'大通公園地鐵站31號門'}] },
-                    { date: '28', weekday: 'Sun', items: [] },
-                    { date: '29', weekday: 'Mon', items: [{id:4, category:'flight', categoryLabel:'航班', name:'前往機場', startTime:'18:00', note:'預備搭乘 NH082 (20:30起飛)'}] },
-                ];
-
-                const defaultPackingList = [
-                    { id: 1, title: '重要證件', items: [{id:101, text:'護照', checked:false}, {id:102, text:'電子機票', checked:false}, {id:103, text:'現金/信用卡', checked:false}] },
-                    { id: 2, title: '衣物類', items: [{id:201, text:'發熱衣', checked:false}, {id:202, text:'羽絨外套', checked:false}, {id:203, text:'圍巾/手套', checked:false}] },
-                    { id: 3, title: '電子產品類', items: [{id:301, text:'手機充電器', checked:false}, {id:302, text:'行動電源', checked:false}, {id:303, text:'轉接頭', checked:false}] },
-                    { id: 4, title: '日常用品', items: [{id:401, text:'牙刷牙膏', checked:false}, {id:402, text:'保養品', checked:false}] },
-                    { id: 5, title: '其他物品', items: [{id:501, text:'常備藥品', checked:false}] }
-                ];
-
-                const defaultInfoBlocks = [
-                    { id: 'exchange', type: 'exchange' },
-                    { id: 'xmas_dinner', type: 'xmas_dinner' },
-                    { id: 'passengers', type: 'passengers' },
-                    { id: 'flights', type: 'flights' },
-                    { id: 'hotel', type: 'hotel' },
-                    { id: 'tour', type: 'tour' },
-                    { id: 'bear', type: 'bear' },
-                    { id: 'quake', type: 'quake' },
-                    { id: 'emergency', type: 'emergency' },
-                    { id: 'consulate', type: 'consulate' }
-                ];
-
-                const defaultShoppingList = [
-                    { id: 1, name: '六花亭 奶油夾心餅', image: 'https://via.placeholder.com/150/e0f2fe/1e293b?text=Biscuit', note: '買5盒' }
-                ];
-
-                const defaultExpenseList = [
-                    { id: 1, category: '飲食', name: '湯咖哩', date: '2025-12-22', amount: 3500, payment: 'cash', note: '' },
-                    { id: 2, category: '交通', name: 'JR Pass', date: '2025-12-22', amount: 24000, payment: 'card', note: '' }
-                ];
-
-                // --- REACTIVE STATE (Initialized from Storage) ---
-                const scheduleData = ref(loadFromStorage('schedule', defaultScheduleData));
-                const packingList = ref(loadFromStorage('packing', defaultPackingList));
-                const infoBlocks = ref(loadFromStorage('info_order', defaultInfoBlocks));
-                const shoppingList = ref(loadFromStorage('shopping', defaultShoppingList));
-                const expenseList = ref(loadFromStorage('expense', defaultExpenseList));
-                const exchange = ref(loadFromStorage('exchange', { jpy: 1000, mop: 0, rate: 0.054 }));
-
-                // --- WATCHERS (Auto-save) ---
-                watch(scheduleData, (val) => saveToStorage('schedule', val), { deep: true });
-                watch(packingList, (val) => saveToStorage('packing', val), { deep: true });
-                watch(infoBlocks, (val) => saveToStorage('info_order', val), { deep: true });
-                watch(shoppingList, (val) => saveToStorage('shopping', val), { deep: true });
-                watch(expenseList, (val) => saveToStorage('expense', val), { deep: true });
-                watch(exchange, (val) => saveToStorage('exchange', val), { deep: true });
 
                 // Snow Effect
                 onMounted(() => {
@@ -1037,7 +957,7 @@
                     for(let i=0; i<50; i++) createSnowflake();
                 });
 
-                // Weather Forecast Data (Static, no need to save)
+                // Weather Forecast Data
                 const weatherForecast = ref([
                     { date: '12/22', icon: 'fas fa-snowflake', temp: '-2° / -6°', desc: '大雪' },
                     { date: '12/23', icon: 'fas fa-snowflake', temp: '-3° / -8°', desc: '小雪' },
@@ -1053,12 +973,31 @@
                     return weatherForecast.value[selectedDayIndex.value] || weatherForecast.value[0];
                 });
 
+                // Schedule Data
+                const scheduleData = ref([
+                    { date: '22', weekday: 'Mon', items: [{id:1, category:'flight', categoryLabel:'航班', name:'抵達新千歲', startTime:'10:35', note:'NH055'}] },
+                    { date: '23', weekday: 'Tue', items: [{id:2, category:'sightseeing', categoryLabel:'景點', name:'小樽運河', startTime:'10:00', note:'拍照', mapLink:'https://maps.app.goo.gl/otaru'}] },
+                    { date: '24', weekday: 'Wed', items: [] },
+                    { date: '25', weekday: 'Thu', items: [{id:5, category:'food', categoryLabel:'美食', name:'HOUSE.H 聖誕晚餐', startTime:'18:00', note:'赤れんが庁舎 1F'}] },
+                    { date: '26', weekday: 'Fri', items: [] },
+                    { date: '27', weekday: 'Sat', items: [{id:3, category:'sightseeing', categoryLabel:'景點', name:'一日團集合', startTime:'07:50', note:'大通公園地鐵站31號門'}] },
+                    { date: '28', weekday: 'Sun', items: [] },
+                    { date: '29', weekday: 'Mon', items: [{id:4, category:'flight', categoryLabel:'航班', name:'前往機場', startTime:'18:00', note:'預備搭乘 NH082 (20:30起飛)'}] },
+                ]);
                 const currentDaySchedule = computed(() => {
                     if (selectedDayIndex.value === -1) return [];
                     return scheduleData.value[selectedDayIndex.value].items;
                 });
 
-                // Packing Logic
+                // Packing List Data & Logic
+                const packingList = ref([
+                    { id: 1, title: '重要證件', items: [{id:101, text:'護照', checked:false}, {id:102, text:'電子機票', checked:false}, {id:103, text:'現金/信用卡', checked:false}] },
+                    { id: 2, title: '衣物類', items: [{id:201, text:'發熱衣', checked:false}, {id:202, text:'羽絨外套', checked:false}, {id:203, text:'圍巾/手套', checked:false}] },
+                    { id: 3, title: '電子產品類', items: [{id:301, text:'手機充電器', checked:false}, {id:302, text:'行動電源', checked:false}, {id:303, text:'轉接頭', checked:false}] },
+                    { id: 4, title: '日常用品', items: [{id:401, text:'牙刷牙膏', checked:false}, {id:402, text:'保養品', checked:false}] },
+                    { id: 5, title: '其他物品', items: [{id:501, text:'常備藥品', checked:false}] }
+                ]);
+
                 const packingProgress = computed(() => {
                     let total = 0;
                     let checked = 0;
@@ -1077,7 +1016,7 @@
                         packingList.value[catIndex].items.push({
                             id: Date.now(),
                             text: text,
-                            checked: false
+                            checked: false 
                         });
                         event.target.value = '';
                     }
@@ -1166,7 +1105,21 @@
                     }
                 };
 
-                // Sortable Logic
+                // Info Tab - Sortable Blocks
+                const infoBlocks = ref([
+                    { id: 'exchange', type: 'exchange' },
+                    { id: 'xmas_dinner', type: 'xmas_dinner' }, // Added Dinner
+                    { id: 'passengers', type: 'passengers' },
+                    { id: 'flights', type: 'flights' },
+                    { id: 'hotel', type: 'hotel' },
+                    { id: 'tour', type: 'tour' },
+                    { id: 'bear', type: 'bear' },
+                    { id: 'quake', type: 'quake' },
+                    { id: 'emergency', type: 'emergency' },
+                    { id: 'consulate', type: 'consulate' }
+                ]);
+
+                // Initialize SortableJS
                 const initSortable = (elementId, listRef) => {
                     const el = document.getElementById(elementId);
                     if (el) {
@@ -1225,7 +1178,8 @@
                     }
                 });
 
-                // Exchange
+                // Info Data
+                const exchange = ref({ jpy: 1000, mop: 0, rate: 0.054 }); 
                 const calculateMOP = () => {
                     exchange.value.mop = (exchange.value.jpy * exchange.value.rate).toFixed(1);
                 };
@@ -1241,16 +1195,19 @@
                     inbound: { date: '2025/12/29' }
                 });
 
-                // Shopping Logic
+                // Shopping Data
+                const shoppingList = ref([
+                    { id: 1, name: '六花亭 奶油夾心餅', image: 'https://via.placeholder.com/150/e0f2fe/1e293b?text=Biscuit', note: '買5盒' }
+                ]);
                 const showShoppingModal = ref(false);
                 const isEditingShopping = ref(false);
                 const editingShoppingId = ref(null);
-                const shoppingForm = ref({ name: '', note: '', imagePreview: null, imageFile: null });
+                const shoppingForm = ref({ name: '', note: '', imagePreview: null });
 
                 const openShoppingModal = () => {
                     isEditingShopping.value = false;
                     editingShoppingId.value = null;
-                    shoppingForm.value = { name: '', note: '', imagePreview: null, imageFile: null };
+                    shoppingForm.value = { name: '', note: '', imagePreview: null };
                     showShoppingModal.value = true;
                 };
 
@@ -1260,27 +1217,28 @@
                     shoppingForm.value = {
                         name: item.name,
                         note: item.note,
-                        imagePreview: item.image,
-                        imageFile: null
+                        imagePreview: item.image
                     };
                     showShoppingModal.value = true;
                 };
 
+                // 使用 FileReader 轉 Base64，解決圖片上傳後消失或無法儲存的問題
                 const handleImageUpload = (event) => {
                     const file = event.target.files[0];
                     if (file) {
-                        // Note: Storing large images in LocalStorage is bad practice (limit 5MB).
-                        // For a real app, upload to server. Here we use FileReader for demo but it might fill quota.
                         const reader = new FileReader();
                         reader.onload = (e) => {
-                             shoppingForm.value.imagePreview = e.target.result;
+                            shoppingForm.value.imagePreview = e.target.result;
                         };
                         reader.readAsDataURL(file);
                     }
                 };
 
                 const saveShoppingItem = () => {
-                    if (!shoppingForm.value.name) return;
+                    if (!shoppingForm.value.name) {
+                        alert("請輸入商品名稱！");
+                        return;
+                    }
                     
                     const newItem = {
                         id: isEditingShopping.value ? editingShoppingId.value : Date.now(),
@@ -1306,7 +1264,11 @@
                     }
                 };
 
-                // Expense Logic
+                // Expense Data
+                const expenseList = ref([
+                    { id: 1, category: '飲食', name: '湯咖哩', date: '2025-12-22', amount: 3500, payment: 'cash', note: '' },
+                    { id: 2, category: '交通', name: 'JR Pass', date: '2025-12-22', amount: 24000, payment: 'card', note: '' }
+                ]);
                 const showExpenseModal = ref(false);
                 const isEditingExpense = ref(false);
                 const editingExpenseId = ref(null);
@@ -1400,8 +1362,7 @@
                     weatherForecast, currentDayWeather,
                     infoBlocks,
                     packingList, packingProgress, addPackingItem, removePackingItem, addCategory, removeCategory,
-                    bgmAudio, isMusicPlaying, toggleMusic,
-                    resetAllData // Exposed reset function
+                    bgmAudio, isMusicPlaying, toggleMusic
                 };
             }
         }).mount('#app');
