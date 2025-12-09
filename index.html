@@ -278,51 +278,17 @@
     </style>
     
     <!-- App Icon Generator Script -->
-    <script>
+    <!-- 自訂 Icon 設定區 -->
+   <script>
         (function() {
-            // 這個腳本會自動生成一個 App Icon 並插入到 head 中
-            function generateAppIcon() {
-                const canvas = document.createElement('canvas');
-                canvas.width = 512;
-                canvas.height = 512;
-                const ctx = canvas.getContext('2d');
+            // ▼▼▼ 請在這裡貼上你的圖片網址 ▼▼▼
+            const yourIconUrl = "icon.png"; 
+            // ▲▲▲ 上面這個是範例(雪人圖示)，你可以換成自己的圖片連結 ▲▲▲
 
-                // 1. 繪製背景 (藍色漸層)
-                const gradient = ctx.createLinearGradient(0, 0, 512, 512);
-                gradient.addColorStop(0, '#0EA5E9'); // Sky-500
-                gradient.addColorStop(1, '#3B82F6'); // Blue-500
-                ctx.fillStyle = gradient;
-                // 繪製圓角矩形 (模擬 iOS Icon 形狀)
-                ctx.beginPath();
-                ctx.roundRect(0, 0, 512, 512, 120);
-                ctx.fill();
-
-                // 2. 繪製文字 "43°"
-                ctx.fillStyle = 'white';
-                ctx.font = 'bold 180px "Noto Sans JP", sans-serif';
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.shadowColor = 'rgba(0,0,0,0.2)';
-                ctx.shadowBlur = 20;
-                ctx.fillText('43°', 256, 266);
-
-                // 3. 繪製雪花裝飾 (簡單幾何圖形)
-                ctx.strokeStyle = 'rgba(255,255,255,0.4)';
-                ctx.lineWidth = 10;
-                ctx.beginPath();
-                ctx.moveTo(256, 80); ctx.lineTo(256, 140); // Top
-                ctx.moveTo(256, 372); ctx.lineTo(256, 432); // Bottom
-                ctx.stroke();
-
-                return canvas.toDataURL('image/png');
-            }
-
-            const iconUrl = generateAppIcon();
-
-            // 建立 Link 標籤
+            // 設定網頁 Favicon 和 iOS 圖示
             const links = [
-                { rel: 'icon', href: iconUrl },
-                { rel: 'apple-touch-icon', href: iconUrl }
+                { rel: 'icon', href: yourIconUrl },
+                { rel: 'apple-touch-icon', href: yourIconUrl }
             ];
 
             links.forEach(attr => {
@@ -331,6 +297,33 @@
                 link.href = attr.href;
                 document.head.appendChild(link);
             });
+
+            // 設定 Web App Manifest
+            const manifest = {
+                "name": "北緯43°の約定",
+                "short_name": "北海道之旅",
+                "start_url": ".",
+                "display": "standalone",
+                "background_color": "#F0F9FF",
+                "theme_color": "#0EA5E9",
+                "orientation": "portrait",
+                "icons": [{
+                    "src": yourIconUrl,
+                    "sizes": "512x512",
+                    "type": "image/png"
+                }]
+            };
+            
+            const stringManifest = JSON.stringify(manifest);
+            const blob = new Blob([stringManifest], {type: 'application/json'});
+            const manifestURL = URL.createObjectURL(blob);
+            
+            const linkManifest = document.createElement('link');
+            linkManifest.rel = 'manifest';
+            linkManifest.href = manifestURL;
+            document.head.appendChild(linkManifest);
+        })();
+    </script>
 
             // 建立 Web App Manifest (讓 Android 也能安裝成 App)
             const manifest = {
