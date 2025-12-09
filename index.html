@@ -50,6 +50,36 @@
             filter: brightness(0.9); 
         }
 
+        /* Music Control */
+        .music-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 50;
+            width: 40px;
+            height: 40px;
+            background: rgba(255, 255, 255, 0.3);
+            backdrop-filter: blur(5px);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .music-btn.playing {
+            background: rgba(14, 165, 233, 0.8);
+            border-color: #0EA5E9;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(14, 165, 233, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(14, 165, 233, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(14, 165, 233, 0); }
+        }
+
         /* Main Content */
         .main-content {
             position: relative;
@@ -238,6 +268,11 @@
 <body class="text-slate-600">
 
     <div id="snow-container"></div>
+    
+    <!-- Background Music -->
+    <audio id="bgm" loop>
+        <source src="christmassong.mp3" type="audio/mp3">
+    </audio>
 
     <div id="app" class="relative min-h-screen">
         
@@ -246,6 +281,11 @@
             <img src="photo.png" alt="北海道插畫" class="banner-image">
             <div class="absolute inset-0 bg-gradient-to-t from-[#F0F9FF] via-[#F0F9FF]/20 to-black/30"></div>
             
+            <!-- Music Toggle Button -->
+            <button @click="toggleMusic" :class="['music-btn', isMusicPlaying ? 'playing' : '']">
+                <i :class="['fas', isMusicPlaying ? 'fa-music' : 'fa-play']"></i>
+            </button>
+
             <div class="absolute bottom-16 left-6 text-slate-700 drop-shadow-sm z-10">
                 <h1 class="text-3xl font-bold tracking-wide text-slate-800 drop-shadow-sm">北緯43°の約定</h1>
                 <p class="text-sm mt-1 text-slate-600 font-medium"><i class="far fa-calendar-alt mr-1"></i> 2025 Dec 22 - 29</p>
@@ -327,8 +367,8 @@
                                 <p v-if="item.note" class="text-xs text-slate-500 mt-0.5 truncate">{{ item.note }}</p>
                             </div>
                             <div class="flex flex-col items-center gap-1.5 pt-1">
-                                <button @click.stop="editScheduleItem(item)" class="w-8 h-8 rounded-full flex items-center justify-center text-slate-300 hover:text-sky-500 hover:bg-sky-50"><i class="fas fa-pen text-xs"></i></button>
-                                <button @click.stop="removeScheduleItem(index)" class="w-8 h-8 rounded-full flex items-center justify-center text-slate-300 hover:text-rose-500 hover:bg-rose-50"><i class="fas fa-trash-alt text-xs"></i></button>
+                                <button @click.stop="withAuth(() => editScheduleItem(item))" class="w-8 h-8 rounded-full flex items-center justify-center text-slate-300 hover:text-sky-500 hover:bg-sky-50"><i class="fas fa-pen text-xs"></i></button>
+                                <button @click.stop="withAuth(() => removeScheduleItem(index))" class="w-8 h-8 rounded-full flex items-center justify-center text-slate-300 hover:text-rose-500 hover:bg-rose-50"><i class="fas fa-trash-alt text-xs"></i></button>
                             </div>
                         </div>
                         <div v-if="item.travelTime" class="travel-connector">
@@ -346,7 +386,7 @@
                     </div>
                 </div>
 
-                <button @click="openScheduleModal" class="fab-btn"><i class="fas fa-plus"></i></button>
+                <button @click="withAuth(openScheduleModal)" class="fab-btn"><i class="fas fa-plus"></i></button>
             </div>
 
             <!-- ================= TAB 2: BOOKING (預訂) ================= -->
@@ -370,7 +410,7 @@
                                 </div>
                                 <div class="flex items-center gap-2">
                                     <div class="bg-sky-100 text-sky-700 text-xs font-bold px-3 py-1 rounded-full">{{ flight.typeLabel }} {{ flight.date }}</div>
-                                    <button @click="editFlight(flight)" class="w-7 h-7 rounded-full bg-slate-100 hover:bg-sky-50 text-slate-400 hover:text-sky-500 flex items-center justify-center transition-colors">
+                                    <button @click="withAuth(() => editFlight(flight))" class="w-7 h-7 rounded-full bg-slate-100 hover:bg-sky-50 text-slate-400 hover:text-sky-500 flex items-center justify-center transition-colors">
                                         <i class="fas fa-pen text-xs"></i>
                                     </button>
                                 </div>
@@ -451,7 +491,7 @@
                                         </div>
                                     </div>
                                 </div>
-                                <button @click="openHotelModal" class="w-full mt-5 py-2.5 rounded-xl border border-slate-200 text-slate-500 text-sm font-bold hover:bg-slate-50 hover:text-sky-500 hover:border-sky-200 transition-all">
+                                <button @click="withAuth(openHotelModal)" class="w-full mt-5 py-2.5 rounded-xl border border-slate-200 text-slate-500 text-sm font-bold hover:bg-slate-50 hover:text-sky-500 hover:border-sky-200 transition-all">
                                     <i class="fas fa-pen mr-1"></i> 編輯住宿資訊
                                 </button>
                             </div>
@@ -522,7 +562,7 @@
                                         </div>
                                     </div>
                                 </div>
-                                <button @click="openTourModal" class="w-full py-2.5 rounded-xl border border-slate-200 text-slate-500 text-sm font-bold hover:bg-slate-50 hover:text-sky-500 hover:border-sky-200 transition-all">
+                                <button @click="withAuth(openTourModal)" class="w-full py-2.5 rounded-xl border border-slate-200 text-slate-500 text-sm font-bold hover:bg-slate-50 hover:text-sky-500 hover:border-sky-200 transition-all">
                                     <i class="fas fa-pen mr-1"></i> 編輯一日團資訊
                                 </button>
                             </div>
@@ -532,7 +572,7 @@
                     <div v-if="bookingCategory === 'voucher'" class="space-y-4">
                         <div class="flex justify-between items-center mb-2 px-2">
                             <h2 class="text-sm font-bold text-slate-500">我的憑證</h2>
-                            <button @click="openVoucherModal" class="text-xs font-bold text-sky-500 bg-sky-50 px-3 py-1.5 rounded-lg hover:bg-sky-100 transition-colors">
+                            <button @click="withAuth(openVoucherModal)" class="text-xs font-bold text-sky-500 bg-sky-50 px-3 py-1.5 rounded-lg hover:bg-sky-100 transition-colors">
                                 <i class="fas fa-plus mr-1"></i> 新增憑證
                             </button>
                         </div>
@@ -547,24 +587,61 @@
                             <div class="flex-1 min-w-0">
                                 <h3 class="font-bold text-slate-700 truncate">{{ voucher.title }}</h3>
                                 <div class="text-xs text-slate-400 truncate mt-0.5">{{ voucher.fileName }}</div>
-                                <a v-if="voucher.fileData" :href="voucher.fileData" :download="voucher.fileName" class="text-[10px] font-bold text-sky-500 mt-1 inline-block hover:underline">
-                                    <i class="fas fa-download mr-1"></i> 下載/預覽
-                                </a>
+                                <div class="flex gap-2 mt-1">
+                                    <!-- 預覽/開啟按鈕 -->
+                                    <a v-if="voucher.fileData" :href="voucher.fileData" target="_blank" class="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-1 rounded hover:bg-slate-200">
+                                        <i class="fas fa-eye mr-1"></i> 預覽
+                                    </a>
+                                    <!-- 下載按鈕 -->
+                                    <a v-if="voucher.fileData" :href="voucher.fileData" :download="voucher.fileName" class="text-[10px] font-bold text-sky-500 bg-sky-50 px-2 py-1 rounded hover:bg-sky-100">
+                                        <i class="fas fa-download mr-1"></i> 下載
+                                    </a>
+                                </div>
                             </div>
                             <div class="flex flex-col gap-2">
-                                <button @click="editVoucher(voucher)" class="w-8 h-8 rounded-full bg-slate-50 text-slate-400 hover:bg-sky-50 hover:text-sky-500 flex items-center justify-center transition-colors">
+                                <button @click="withAuth(() => editVoucher(voucher))" class="w-8 h-8 rounded-full bg-slate-50 text-slate-400 hover:bg-sky-50 hover:text-sky-500 flex items-center justify-center transition-colors">
                                     <i class="fas fa-pen text-xs"></i>
                                 </button>
-                                <button @click="deleteVoucher(voucher.id)" class="w-8 h-8 rounded-full bg-slate-50 text-slate-400 hover:bg-red-50 hover:text-red-500 flex items-center justify-center transition-colors">
+                                <button @click="withAuth(() => deleteVoucher(voucher.id))" class="w-8 h-8 rounded-full bg-slate-50 text-slate-400 hover:bg-red-50 hover:text-red-500 flex items-center justify-center transition-colors">
                                     <i class="fas fa-trash-alt text-xs"></i>
                                 </button>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Other (Updated with VJW, Safety, Emergency) -->
+                    <!-- Other (Updated) -->
                     <div v-if="bookingCategory === 'other'" class="space-y-6">
                         
+                        <!-- Restaurant Reservation (Moved to Top) -->
+                        <section class="bg-white rounded-2xl overflow-hidden shadow-sm border border-slate-100">
+                            <div class="bg-slate-800 p-4 flex justify-between items-center text-white">
+                                <div class="flex items-center gap-2">
+                                    <i class="fas fa-utensils text-yellow-400"></i>
+                                    <span class="font-bold">餐廳預約確認</span>
+                                </div>
+                                <span class="text-xs bg-green-500 px-2 py-0.5 rounded text-white font-bold">已確認</span>
+                            </div>
+                            <div class="p-5">
+                                <div class="text-center mb-4 pb-4 border-b border-slate-100">
+                                    <h3 class="text-xl font-bold text-slate-800 mb-1">{{ restaurantData.name }}</h3>
+                                    <div class="text-sm text-slate-500">{{ restaurantData.course }}</div>
+                                </div>
+                                <div class="space-y-3 text-sm">
+                                    <div class="flex justify-between"><span class="text-slate-400">預約號碼</span><span class="font-bold font-mono">{{ restaurantData.id }}</span></div>
+                                    <div class="flex justify-between"><span class="text-slate-400">日期時間</span><span class="font-bold text-sky-600">{{ restaurantData.dateTime }}</span></div>
+                                    <div class="flex justify-between"><span class="text-slate-400">人數</span><span class="font-bold">{{ restaurantData.pax }}</span></div>
+                                    <div class="flex justify-between"><span class="text-slate-400">座位</span><span class="font-bold">{{ restaurantData.seat }}</span></div>
+                                    <div class="flex justify-between"><span class="text-slate-400">預約人</span><span class="font-bold">{{ restaurantData.booker }}</span></div>
+                                    <div class="bg-slate-50 p-3 rounded-lg text-xs mt-2">
+                                        <div class="font-bold text-slate-700 mb-1"><i class="fas fa-map-marker-alt mr-1"></i>地址</div>
+                                        <div class="text-slate-500 mb-2">{{ restaurantData.address }}</div>
+                                        <div class="font-bold text-slate-700 mb-1"><i class="fas fa-phone mr-1"></i>電話</div>
+                                        <div class="text-slate-500">{{ restaurantData.phone }}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+
                         <!-- Visit Japan Web -->
                         <a href="https://vjw-lp.digital.go.jp/en/" target="_blank" class="block bg-white rounded-2xl p-4 shadow-sm border border-slate-100 flex items-center justify-between group hover:border-rose-200 transition-colors">
                             <div class="flex items-center gap-4">
@@ -630,36 +707,6 @@
                                 </a>
                             </div>
                         </section>
-
-                        <!-- Restaurant Reservation -->
-                        <section class="bg-white rounded-2xl overflow-hidden shadow-sm border border-slate-100">
-                            <div class="bg-slate-800 p-4 flex justify-between items-center text-white">
-                                <div class="flex items-center gap-2">
-                                    <i class="fas fa-utensils text-yellow-400"></i>
-                                    <span class="font-bold">餐廳預約確認</span>
-                                </div>
-                                <span class="text-xs bg-green-500 px-2 py-0.5 rounded text-white font-bold">已確認</span>
-                            </div>
-                            <div class="p-5">
-                                <div class="text-center mb-4 pb-4 border-b border-slate-100">
-                                    <h3 class="text-xl font-bold text-slate-800 mb-1">{{ restaurantData.name }}</h3>
-                                    <div class="text-sm text-slate-500">{{ restaurantData.course }}</div>
-                                </div>
-                                <div class="space-y-3 text-sm">
-                                    <div class="flex justify-between"><span class="text-slate-400">預約號碼</span><span class="font-bold font-mono">{{ restaurantData.id }}</span></div>
-                                    <div class="flex justify-between"><span class="text-slate-400">日期時間</span><span class="font-bold text-sky-600">{{ restaurantData.dateTime }}</span></div>
-                                    <div class="flex justify-between"><span class="text-slate-400">人數</span><span class="font-bold">{{ restaurantData.pax }}</span></div>
-                                    <div class="flex justify-between"><span class="text-slate-400">座位</span><span class="font-bold">{{ restaurantData.seat }}</span></div>
-                                    <div class="flex justify-between"><span class="text-slate-400">預約人</span><span class="font-bold">{{ restaurantData.booker }}</span></div>
-                                    <div class="bg-slate-50 p-3 rounded-lg text-xs mt-2">
-                                        <div class="font-bold text-slate-700 mb-1"><i class="fas fa-map-marker-alt mr-1"></i>地址</div>
-                                        <div class="text-slate-500 mb-2">{{ restaurantData.address }}</div>
-                                        <div class="font-bold text-slate-700 mb-1"><i class="fas fa-phone mr-1"></i>電話</div>
-                                        <div class="text-slate-500">{{ restaurantData.phone }}</div>
-                                    </div>
-                                </div>
-                            </div>
-                        </section>
                     </div>
 
                 </div>
@@ -676,25 +723,31 @@
                 <div v-if="expenseMode === 'input'" class="animate-fade-in">
                     <div class="bg-white/90 backdrop-blur-sm rounded-3xl p-6 shadow-sm border border-white">
                         <div class="space-y-5">
-                            <div class="grid grid-cols-2 gap-4">
+                            <!-- Date & Payer Aligned -->
+                            <div class="grid grid-cols-2 gap-4 items-end">
                                 <div>
                                     <label class="block text-xs font-bold text-slate-400 mb-1.5">日期</label>
-                                    <input type="date" v-model="expenseForm.date" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm font-bold text-slate-700 outline-none focus:border-sky-400 transition-colors">
+                                    <input type="date" v-model="expenseForm.date" class="w-full h-[46px] bg-slate-50 border border-slate-200 rounded-xl px-3 text-sm font-bold text-slate-700 outline-none focus:border-sky-400 transition-colors">
                                 </div>
                                 <div>
                                     <label class="block text-xs font-bold text-slate-400 mb-1.5">付款人</label>
-                                    <div class="flex gap-2">
-                                        <div @click="expenseForm.payer = 'Kyle'" :class="['flex-1 py-2.5 rounded-xl text-xs font-bold text-center border cursor-pointer transition-all', expenseForm.payer === 'Kyle' ? 'bg-blue-50 border-blue-200 text-blue-600' : 'bg-slate-50 border-slate-200 text-slate-400']">Kyle</div>
-                                        <div @click="expenseForm.payer = 'Hayley'" :class="['flex-1 py-2.5 rounded-xl text-xs font-bold text-center border cursor-pointer transition-all', expenseForm.payer === 'Hayley' ? 'bg-pink-50 border-pink-200 text-pink-600' : 'bg-slate-50 border-slate-200 text-slate-400']">Hayley</div>
+                                    <div class="flex gap-2 h-[46px]">
+                                        <div @click="expenseForm.payer = 'Kyle'" :class="['flex-1 flex items-center justify-center rounded-xl text-xs font-bold border cursor-pointer transition-all', expenseForm.payer === 'Kyle' ? 'bg-blue-50 border-blue-200 text-blue-600' : 'bg-slate-50 border-slate-200 text-slate-400']">Kyle</div>
+                                        <div @click="expenseForm.payer = 'Hayley'" :class="['flex-1 flex items-center justify-center rounded-xl text-xs font-bold border cursor-pointer transition-all', expenseForm.payer === 'Hayley' ? 'bg-pink-50 border-pink-200 text-pink-600' : 'bg-slate-50 border-slate-200 text-slate-400']">Hayley</div>
                                     </div>
                                 </div>
                             </div>
+                            
+                            <!-- Amount & Currency (Fixed MOP overlap) -->
                             <div>
                                 <label class="block text-xs font-bold text-slate-400 mb-1.5">金額 & 幣別</label>
                                 <div class="flex gap-3">
                                     <div class="relative flex-1">
                                         <span class="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-slate-400">{{ expenseForm.currency === 'JPY' ? '¥' : 'MOP$' }}</span>
-                                        <input type="number" v-model="expenseForm.amount" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 pl-12 text-lg font-bold text-slate-800 outline-none focus:border-sky-400 transition-colors" placeholder="0">
+                                        <!-- Dynamic Padding Left based on Currency -->
+                                        <input type="number" v-model="expenseForm.amount" 
+                                               :class="['w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-lg font-bold text-slate-800 outline-none focus:border-sky-400 transition-colors', expenseForm.currency === 'MOP' ? 'pl-16' : 'pl-10']" 
+                                               placeholder="0">
                                     </div>
                                     <div class="custom-radio-group w-32">
                                         <div @click="expenseForm.currency = 'JPY'" :class="['custom-radio-item', expenseForm.currency === 'JPY' ? 'active' : '']">JPY</div>
@@ -724,7 +777,7 @@
                                     <div @click="expenseForm.payment = 'epay'" :class="['custom-radio-item', expenseForm.payment === 'epay' ? 'active' : '']"><i class="fas fa-qrcode mr-1"></i>電子支付</div>
                                 </div>
                             </div>
-                            <button @click="saveExpense" class="w-full bg-gradient-to-r from-sky-500 to-blue-600 text-white py-4 rounded-xl font-bold shadow-lg shadow-sky-200 active:scale-95 transition-transform mt-2">
+                            <button @click="withAuth(saveExpense)" class="w-full bg-gradient-to-r from-sky-500 to-blue-600 text-white py-4 rounded-xl font-bold shadow-lg shadow-sky-200 active:scale-95 transition-transform mt-2">
                                 <i class="fas fa-check mr-2"></i> {{ isEditingExpense ? '更新紀錄' : '儲存紀錄' }}
                             </button>
                             <button v-if="isEditingExpense" @click="cancelEditExpense" class="w-full bg-slate-100 text-slate-500 py-3 rounded-xl font-bold text-sm">取消編輯</button>
@@ -784,8 +837,8 @@
                                             <span class="text-xs text-slate-400 mr-0.5">{{ expense.currency === 'JPY' ? '¥' : 'MOP$' }}</span>{{ Number(expense.amount).toLocaleString() }}
                                         </div>
                                         <div class="flex items-center gap-1">
-                                            <button @click.stop="editExpense(expense)" class="w-6 h-6 rounded-full flex items-center justify-center text-slate-300 hover:text-sky-500 hover:bg-sky-50 transition-colors"><i class="fas fa-pen text-[10px]"></i></button>
-                                            <button @click.stop="removeExpense(expense.id)" class="w-6 h-6 rounded-full flex items-center justify-center text-slate-300 hover:text-rose-500 hover:bg-rose-50 transition-colors"><i class="fas fa-trash-alt text-[10px]"></i></button>
+                                            <button @click.stop="withAuth(() => editExpense(expense))" class="w-6 h-6 rounded-full flex items-center justify-center text-slate-300 hover:text-sky-500 hover:bg-sky-50 transition-colors"><i class="fas fa-pen text-[10px]"></i></button>
+                                            <button @click.stop="withAuth(() => removeExpense(expense.id))" class="w-6 h-6 rounded-full flex items-center justify-center text-slate-300 hover:text-rose-500 hover:bg-rose-50 transition-colors"><i class="fas fa-trash-alt text-[10px]"></i></button>
                                         </div>
                                     </div>
                                 </div>
@@ -821,7 +874,7 @@
                         </div>
                     </div>
                 </div>
-                <button @click="openJournalModal" class="fab-btn"><i class="fas fa-pen-nib"></i></button>
+                <button @click="withAuth(openJournalModal)" class="fab-btn"><i class="fas fa-pen-nib"></i></button>
             </div>
 
             <!-- ================= TAB 5: PREPARATION (準備) ================= -->
@@ -855,7 +908,7 @@
                         <div v-for="(category, catIndex) in filteredPackingList" :key="category.id" class="relative">
                             <div class="flex justify-between items-center mb-2">
                                 <h3 class="font-bold text-slate-700 text-sm">{{ category.title }}</h3>
-                                <button @click="removeCategory(category.id)" class="text-slate-300 hover:text-rose-500"><i class="fas fa-trash-alt text-xs"></i></button>
+                                <button @click="withAuth(() => removeCategory(category.id))" class="text-slate-300 hover:text-rose-500"><i class="fas fa-trash-alt text-xs"></i></button>
                             </div>
                             <div class="space-y-2 mb-2">
                                 <div v-for="(item, itemIndex) in category.items" :key="item.id" class="flex items-start gap-3 p-3 bg-white rounded-xl border border-slate-100 shadow-sm group">
@@ -875,23 +928,23 @@
                                         </div>
                                     </div>
                                     <div class="flex flex-col gap-2">
-                                        <button @click="openPackingModal(category.id, item.id)" class="w-7 h-7 rounded-full bg-slate-50 text-slate-400 hover:bg-sky-50 hover:text-sky-500 flex items-center justify-center transition-colors">
+                                        <button @click="withAuth(() => openPackingModal(category.id, item.id))" class="w-7 h-7 rounded-full bg-slate-50 text-slate-400 hover:bg-sky-50 hover:text-sky-500 flex items-center justify-center transition-colors">
                                             <i class="fas fa-pen text-[10px]"></i>
                                         </button>
-                                        <button @click="deletePackingItem(category.id, item.id)" class="w-7 h-7 rounded-full bg-slate-50 text-slate-400 hover:bg-red-50 hover:text-red-500 flex items-center justify-center transition-colors">
+                                        <button @click="withAuth(() => deletePackingItem(category.id, item.id))" class="w-7 h-7 rounded-full bg-slate-50 text-slate-400 hover:bg-red-50 hover:text-red-500 flex items-center justify-center transition-colors">
                                             <i class="fas fa-trash-alt text-[10px]"></i>
                                         </button>
                                     </div>
                                 </div>
                                 <div v-if="category.items.length === 0" class="text-center text-xs text-slate-300 py-2">無項目</div>
                             </div>
-                            <button @click="openPackingModal(category.id)" class="w-full py-2 border border-dashed border-slate-300 rounded-xl text-slate-400 text-xs font-bold hover:bg-slate-50 hover:text-sky-500 hover:border-sky-300 transition-all">
+                            <button @click="withAuth(() => openPackingModal(category.id))" class="w-full py-2 border border-dashed border-slate-300 rounded-xl text-slate-400 text-xs font-bold hover:bg-slate-50 hover:text-sky-500 hover:border-sky-300 transition-all">
                                 <i class="fas fa-plus mr-1"></i> 新增物品
                             </button>
                         </div>
                     </div>
                     <div class="mt-6 pt-4 border-t border-slate-100">
-                        <button @click="addCategory" class="w-full py-3 bg-slate-50 rounded-xl text-slate-500 text-sm font-bold hover:bg-slate-100 hover:text-sky-600 transition-all">
+                        <button @click="withAuth(addCategory)" class="w-full py-3 bg-slate-50 rounded-xl text-slate-500 text-sm font-bold hover:bg-slate-100 hover:text-sky-600 transition-all">
                             <i class="fas fa-folder-plus mr-1"></i> 新增類別
                         </button>
                     </div>
@@ -924,16 +977,16 @@
                         </div>
 
                         <div class="flex flex-col gap-2">
-                            <button @click="openShoppingModal(item)" class="w-8 h-8 rounded-full bg-slate-50 text-slate-400 hover:bg-sky-50 hover:text-sky-500 flex items-center justify-center transition-colors">
+                            <button @click="withAuth(() => openShoppingModal(item))" class="w-8 h-8 rounded-full bg-slate-50 text-slate-400 hover:bg-sky-50 hover:text-sky-500 flex items-center justify-center transition-colors">
                                 <i class="fas fa-pen text-xs"></i>
                             </button>
-                            <button @click="deleteShoppingItem(item.id)" class="w-8 h-8 rounded-full bg-slate-50 text-slate-400 hover:bg-red-50 hover:text-red-500 flex items-center justify-center transition-colors">
+                            <button @click="withAuth(() => deleteShoppingItem(item.id))" class="w-8 h-8 rounded-full bg-slate-50 text-slate-400 hover:bg-red-50 hover:text-red-500 flex items-center justify-center transition-colors">
                                 <i class="fas fa-trash-alt text-xs"></i>
                             </button>
                         </div>
                     </div>
 
-                    <button @click="openShoppingModal()" class="fab-btn"><i class="fas fa-plus"></i></button>
+                    <button @click="withAuth(() => openShoppingModal())" class="fab-btn"><i class="fas fa-plus"></i></button>
                 </section>
             </div>
 
@@ -952,6 +1005,19 @@
 
         <!-- ================= MODALS ================= -->
         
+        <!-- Password Modal -->
+        <div v-if="showPasswordModal" class="modal-overlay" @click.self="showPasswordModal = false">
+            <div class="bg-white w-full max-w-xs rounded-3xl p-6 shadow-2xl text-center">
+                <div class="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-500">
+                    <i class="fas fa-lock"></i>
+                </div>
+                <h3 class="text-lg font-bold mb-2 text-slate-800">請輸入密碼</h3>
+                <p class="text-xs text-slate-400 mb-4">需要驗證權限才能編輯內容</p>
+                <input type="password" v-model="passwordInput" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-center text-lg font-bold outline-none mb-4" placeholder="******">
+                <button @click="verifyPassword" class="w-full bg-sky-500 text-white py-3 rounded-xl font-bold shadow-lg shadow-sky-200">確認</button>
+            </div>
+        </div>
+
         <!-- Packing Modal -->
         <div v-if="showPackingModal" class="modal-overlay" @click.self="showPackingModal = false">
             <div class="bg-white w-full max-w-sm rounded-3xl p-6 shadow-2xl">
@@ -1226,6 +1292,50 @@
                 const currentTab = ref('schedule');
                 const selectedDayIndex = ref(0);
                 const bookingCategory = ref('tour'); 
+
+                // --- Auth Logic ---
+                const isAuthenticated = ref(false);
+                const showPasswordModal = ref(false);
+                const passwordInput = ref('');
+                const pendingAction = ref(null);
+                const CORRECT_PASSWORD = '211912';
+
+                const withAuth = (action) => {
+                    if (isAuthenticated.value) {
+                        action();
+                    } else {
+                        pendingAction.value = action;
+                        passwordInput.value = '';
+                        showPasswordModal.value = true;
+                    }
+                };
+
+                const verifyPassword = () => {
+                    if (passwordInput.value === CORRECT_PASSWORD) {
+                        isAuthenticated.value = true;
+                        showPasswordModal.value = false;
+                        if (pendingAction.value) {
+                            pendingAction.value();
+                            pendingAction.value = null;
+                        }
+                    } else {
+                        alert('密碼錯誤');
+                        passwordInput.value = '';
+                    }
+                };
+
+                // Music Logic
+                const isMusicPlaying = ref(false);
+                const toggleMusic = () => {
+                    const audio = document.getElementById('bgm');
+                    if (audio.paused) {
+                        audio.play();
+                        isMusicPlaying.value = true;
+                    } else {
+                        audio.pause();
+                        isMusicPlaying.value = false;
+                    }
+                };
 
                 // Countdown
                 const countdown = ref('');
@@ -1679,7 +1789,11 @@
                     shoppingList, filteredShoppingList, showShoppingModal, isEditingShopping, shoppingForm, openShoppingModal, handleShoppingImage, saveShoppingItem, deleteShoppingItem,
                     // Helpers
                     getCategoryIcon, getCategoryColor, getTransportIcon, getExpenseIcon, getExpenseColor,
-                    restaurantData
+                    restaurantData,
+                    // Music
+                    isMusicPlaying, toggleMusic,
+                    // Auth
+                    withAuth, showPasswordModal, passwordInput, verifyPassword
                 };
             }
         }).mount('#app');
