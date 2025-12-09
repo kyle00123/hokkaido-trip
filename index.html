@@ -588,8 +588,8 @@
                                 <h3 class="font-bold text-slate-700 truncate">{{ voucher.title }}</h3>
                                 <div class="text-xs text-slate-400 truncate mt-0.5">{{ voucher.fileName }}</div>
                                 <div class="flex gap-2 mt-1">
-                                    <!-- 預覽/開啟按鈕 -->
-                                    <a v-if="voucher.fileData" :href="voucher.fileData" target="_blank" class="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-1 rounded hover:bg-slate-200">
+                                    <!-- 預覽/開啟按鈕 (改為 window.open 確保能開啟) -->
+                                    <a v-if="voucher.fileData" href="#" @click.prevent="openVoucherPreview(voucher.fileData)" class="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-1 rounded hover:bg-slate-200">
                                         <i class="fas fa-eye mr-1"></i> 預覽
                                     </a>
                                     <!-- 下載按鈕 -->
@@ -609,10 +609,10 @@
                         </div>
                     </div>
 
-                    <!-- Other (Updated) -->
+                    <!-- Other -->
                     <div v-if="bookingCategory === 'other'" class="space-y-6">
                         
-                        <!-- Restaurant Reservation (Moved to Top) -->
+                        <!-- Restaurant Reservation -->
                         <section class="bg-white rounded-2xl overflow-hidden shadow-sm border border-slate-100">
                             <div class="bg-slate-800 p-4 flex justify-between items-center text-white">
                                 <div class="flex items-center gap-2">
@@ -723,13 +723,13 @@
                 <div v-if="expenseMode === 'input'" class="animate-fade-in">
                     <div class="bg-white/90 backdrop-blur-sm rounded-3xl p-6 shadow-sm border border-white">
                         <div class="space-y-5">
-                            <!-- Date & Payer Aligned -->
-                            <div class="grid grid-cols-2 gap-4 items-end">
-                                <div>
+                            <!-- Date & Payer Aligned (Fixed for mobile) -->
+                            <div class="flex flex-col sm:flex-row gap-4">
+                                <div class="flex-1">
                                     <label class="block text-xs font-bold text-slate-400 mb-1.5">日期</label>
                                     <input type="date" v-model="expenseForm.date" class="w-full h-[46px] bg-slate-50 border border-slate-200 rounded-xl px-3 text-sm font-bold text-slate-700 outline-none focus:border-sky-400 transition-colors">
                                 </div>
-                                <div>
+                                <div class="flex-1">
                                     <label class="block text-xs font-bold text-slate-400 mb-1.5">付款人</label>
                                     <div class="flex gap-2 h-[46px]">
                                         <div @click="expenseForm.payer = 'Kyle'" :class="['flex-1 flex items-center justify-center rounded-xl text-xs font-bold border cursor-pointer transition-all', expenseForm.payer === 'Kyle' ? 'bg-blue-50 border-blue-200 text-blue-600' : 'bg-slate-50 border-slate-200 text-slate-400']">Kyle</div>
@@ -738,13 +738,12 @@
                                 </div>
                             </div>
                             
-                            <!-- Amount & Currency (Fixed MOP overlap) -->
+                            <!-- Amount & Currency -->
                             <div>
                                 <label class="block text-xs font-bold text-slate-400 mb-1.5">金額 & 幣別</label>
                                 <div class="flex gap-3">
                                     <div class="relative flex-1">
                                         <span class="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-slate-400">{{ expenseForm.currency === 'JPY' ? '¥' : 'MOP$' }}</span>
-                                        <!-- Dynamic Padding Left based on Currency -->
                                         <input type="number" v-model="expenseForm.amount" 
                                                :class="['w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-lg font-bold text-slate-800 outline-none focus:border-sky-400 transition-colors', expenseForm.currency === 'MOP' ? 'pl-16' : 'pl-10']" 
                                                placeholder="0">
@@ -1247,12 +1246,13 @@
             <div class="bg-white w-full max-w-sm rounded-3xl p-6 shadow-2xl max-h-[90vh] overflow-y-auto hide-scrollbar">
                 <h3 class="text-lg font-bold mb-4 text-slate-800">寫日記</h3>
                 <div class="space-y-4">
-                    <div class="grid grid-cols-2 gap-3">
-                        <div>
+                    <!-- Date & Author Aligned (Fixed for mobile) -->
+                    <div class="flex flex-col sm:flex-row gap-3">
+                        <div class="flex-1">
                             <label class="block text-xs font-bold text-slate-400 mb-1">日期</label>
                             <input type="date" v-model="journalForm.date" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2 text-sm outline-none">
                         </div>
-                        <div>
+                        <div class="flex-1">
                             <label class="block text-xs font-bold text-slate-400 mb-1">記錄人</label>
                             <div class="flex gap-2">
                                 <div @click="journalForm.author = 'Kyle'" :class="['flex-1 py-2 rounded-lg text-xs font-bold text-center border cursor-pointer transition-all', journalForm.author === 'Kyle' ? 'bg-blue-50 border-blue-200 text-blue-600' : 'bg-white border-slate-200 text-slate-400']">Kyle</div>
@@ -1369,7 +1369,7 @@
                 const flightData = ref([
                     {
                         id: 1, type: 'outbound', typeLabel: '去程', date: '12/22', airline: '全日空航空', 
-                        logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e2/ANA_logo_%282023%29.svg/2560px-ANA_logo_%282023%29.svg.png',
+                        logo: 'ana.png',
                         legs: [
                             { dep: 'HKG', arr: 'HND', depTime: '00:05', arrTime: '04:55', flightNo: 'NH814', aircraft: '波音 787-800', termDep: 'T1', termArr: 'T3', duration: '3h 50m' },
                             { dep: 'HND', arr: 'CTS', depTime: '09:00', arrTime: '10:35', flightNo: 'NH055', aircraft: '波音 787-10', termDep: 'T2', termArr: 'Dom', duration: '1h 35m' }
@@ -1381,9 +1381,9 @@
                         logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e2/ANA_logo_%282023%29.svg/2560px-ANA_logo_%282023%29.svg.png',
                         legs: [
                             { dep: 'CTS', arr: 'HND', depTime: '20:30', arrTime: '22:10', flightNo: 'NH082', aircraft: '波音 777-300', termDep: 'Dom', termArr: 'T2', duration: '1h 40m' },
-                            { dep: 'HND', arr: 'HKG', depTime: '<span class="text-[10px] text-orange-500 mr-1">12/30</span>09:15', arrTime: '13:30', flightNo: 'NH813', aircraft: '波音 787-800', termDep: 'T2', termArr: 'T1', duration: '5h 15m' }
+                            { dep: 'HND', arr: 'HKG', depTime: '<span class="text-[10px] text-orange-500 mr-1">12/30</span>02:00', arrTime: '05:45', flightNo: 'NH813', aircraft: '波音 787-800', termDep: 'T2', termArr: 'T1', duration: '4h 45m' }
                         ],
-                        transfer: { text: '東京轉機 11h 5m', note: '隔夜轉機' }
+                        transfer: { text: '東京轉機 3h 50m', note: '隔夜轉機' }
                     }
                 ]);
 
@@ -1450,6 +1450,19 @@
                 const saveVoucher = () => { if (!voucherForm.value.title) { alert('請輸入憑證標題'); return; } if (isEditingVoucher.value) { const index = voucherList.value.findIndex(v => v.id === editingVoucherId.value); if (index !== -1) { const oldData = voucherList.value[index]; voucherList.value[index] = { ...oldData, title: voucherForm.value.title, fileName: voucherForm.value.fileName || oldData.fileName, fileData: voucherForm.value.fileData || oldData.fileData }; } } else { voucherList.value.push({ id: Date.now(), title: voucherForm.value.title, fileName: voucherForm.value.fileName || '未上傳檔案', fileData: voucherForm.value.fileData }); } showVoucherModal.value = false; };
                 const editVoucher = (voucher) => { isEditingVoucher.value = true; editingVoucherId.value = voucher.id; voucherForm.value = { title: voucher.title, fileName: voucher.fileName, fileData: null }; showVoucherModal.value = true; };
                 const deleteVoucher = (id) => { if(confirm('確定要刪除此憑證嗎？')) { voucherList.value = voucherList.value.filter(v => v.id !== id); } };
+                
+                // Voucher Preview Fix
+                const openVoucherPreview = (dataUrl) => {
+                    const win = window.open();
+                    if (dataUrl.startsWith('data:image')) {
+                        win.document.write('<img src="' + dataUrl + '" style="max-width:100%">');
+                    } else if (dataUrl.startsWith('data:application/pdf')) {
+                        win.document.write('<iframe src="' + dataUrl + '" frameborder="0" style="border:0; top:0px; left:0px; bottom:0px; right:0px; width:100%; height:100%;" allowfullscreen></iframe>');
+                    } else {
+                        // Fallback
+                        win.document.write('<iframe src="' + dataUrl + '" frameborder="0" style="border:0; top:0px; left:0px; bottom:0px; right:0px; width:100%; height:100%;" allowfullscreen></iframe>');
+                    }
+                };
 
                 // Modals & Edit Logic
                 const showTourModal = ref(false); const tourForm = ref({}); const openTourModal = () => { tourForm.value = { ...tourData.value }; showTourModal.value = true; }; const saveTour = () => { tourData.value = { ...tourForm.value }; showTourModal.value = false; };
@@ -1778,7 +1791,7 @@
                     flightData, showFlightModal, flightForm, editFlight, saveFlight,
                     hotelData, showHotelModal, hotelForm, openHotelModal, saveHotel,
                     tourData, showTourModal, tourForm, openTourModal, saveTour,
-                    voucherList, showVoucherModal, isEditingVoucher, voucherForm, openVoucherModal, handleVoucherFile, saveVoucher, editVoucher, deleteVoucher,
+                    voucherList, showVoucherModal, isEditingVoucher, voucherForm, openVoucherModal, handleVoucherFile, saveVoucher, editVoucher, deleteVoucher, openVoucherPreview,
                     expenseMode, expenseFilter, expenseList, isEditingExpense, expenseForm, saveExpense, editExpense, cancelEditExpense, removeExpense, 
                     totalExpensesJPY, totalCashJPY, totalCardJPY, totalEpayJPY, groupedExpenses, mopToJpyRate,
                     journalEntries, showJournalModal, journalForm, openJournalModal, saveJournal, handleJournalPhotos, removeJournalPhoto,
