@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>北緯43°の約定</title> <!-- 這是主畫面會顯示的名稱 -->
+    <title>北緯43°の約定</title>
     
     <!-- ========================================== -->
     <!-- [設定主畫面 Icon] 請修改下方的 href 網址 -->
@@ -11,7 +11,7 @@
     <link rel="apple-touch-icon" id="app-icon" href="icon.png">
     <link rel="icon" href="icon.png">
 
-    <!-- iOS Web App 設定 (開啟後隱藏網址列) -->
+    <!-- iOS Web App 設定 -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="北緯43°の約定">
@@ -31,7 +31,7 @@
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
 
-    <!-- 自動產生 Android Manifest (讓 Android 也能讀取 Icon) -->
+    <!-- Android Manifest Script -->
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const iconUrl = document.getElementById('app-icon').href;
@@ -43,16 +43,8 @@
                 "background_color": "#F0F9FF",
                 "theme_color": "#F0F9FF",
                 "icons": [
-                    {
-                        "src": iconUrl,
-                        "sizes": "192x192",
-                        "type": "image/png"
-                    },
-                    {
-                        "src": iconUrl,
-                        "sizes": "512x512",
-                        "type": "image/png"
-                    }
+                    { "src": iconUrl, "sizes": "192x192", "type": "image/png" },
+                    { "src": iconUrl, "sizes": "512x512", "type": "image/png" }
                 ]
             };
             const stringManifest = JSON.stringify(manifest);
@@ -66,6 +58,11 @@
     </script>
 
     <style>
+        /* [重要] 防止 Vue 初始化前的閃爍問題 */
+        [v-cloak] {
+            display: none !important;
+        }
+
         body {
             font-family: 'Noto Sans JP', sans-serif;
             background-color: #F0F9FF; 
@@ -74,7 +71,6 @@
             overscroll-behavior-y: none;
             overflow-x: hidden;
             padding-bottom: 110px;
-            /* 針對 iOS PWA 模式的頂部安全區域調整 */
             padding-top: env(safe-area-inset-top);
         }
         
@@ -115,7 +111,6 @@
             border: 1px solid rgba(255, 255, 255, 0.5);
             cursor: pointer;
             transition: all 0.3s;
-            /* 避免被瀏海擋住 */
             margin-top: env(safe-area-inset-top);
         }
         .music-btn.playing {
@@ -153,7 +148,6 @@
             display: flex;
             justify-content: center;
             width: auto;
-            /* 針對 iOS PWA 模式的底部安全區域調整 */
             margin-bottom: env(safe-area-inset-bottom);
         }
 
@@ -314,7 +308,6 @@
             position: relative;
             margin-top: 8px;
         }
-        
     </style>
 </head>
 <body class="text-slate-600">
@@ -326,7 +319,8 @@
         <source src="christmassong.mp3" type="audio/mp3">
     </audio>
 
-    <div id="app" class="relative min-h-screen">
+    <!-- [重要] 這裡加入了 v-cloak -->
+    <div id="app" class="relative min-h-screen" v-cloak>
         
         <!-- Header -->
         <header class="banner-container">
@@ -1421,7 +1415,7 @@
                 const flightData = ref([
                     {
                         id: 1, type: 'outbound', typeLabel: '去程', date: '12/22', airline: '全日空航空', 
-                        logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e2/ANA_logo_%282023%29.svg/2560px-ANA_logo_%282023%29.svg.png',
+                        logo: 'ana.png',
                         legs: [
                             { dep: 'HKG', arr: 'HND', depTime: '00:05', arrTime: '04:55', flightNo: 'NH814', aircraft: '波音 787-800', termDep: 'T1', termArr: 'T3', duration: '3h 50m' },
                             { dep: 'HND', arr: 'CTS', depTime: '09:00', arrTime: '10:35', flightNo: 'NH055', aircraft: '波音 787-10', termDep: 'T2', termArr: 'Dom', duration: '1h 35m' }
