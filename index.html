@@ -3,6 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <!-- 設定 iOS 狀態列顏色 -->
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#F0F9FF">
+    <!-- 啟用 Web App 模式 (隱藏瀏覽器介面) -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="北海道之旅">
+    
     <title>北緯43°の約定 2025</title>
     
     <!-- Tailwind CSS -->
@@ -29,6 +37,8 @@
             overscroll-behavior-y: none;
             overflow-x: hidden;
             padding-bottom: 110px;
+            /* 針對 iPhone X 以上機型的底部安全區域調整 */
+            padding-bottom: calc(110px + env(safe-area-inset-bottom));
         }
         
         .hide-scrollbar::-webkit-scrollbar { display: none; }
@@ -53,7 +63,7 @@
         /* Music Control */
         .music-btn {
             position: absolute;
-            top: 20px;
+            top: 20px; /* 如果是全螢幕模式，可能需要避開瀏海，JS會動態調整 */
             right: 20px;
             z-index: 50;
             width: 40px;
@@ -98,6 +108,7 @@
         .apple-dock-container {
             position: fixed;
             bottom: 24px;
+            bottom: calc(24px + env(safe-area-inset-bottom)); /* 適配 iPhone 底部橫條 */
             left: 50%;
             transform: translateX(-50%);
             z-index: 100;
@@ -141,6 +152,7 @@
         .fab-btn {
             position: fixed;
             bottom: 100px;
+            bottom: calc(100px + env(safe-area-inset-bottom));
             right: 20px;
             width: 52px;
             height: 52px;
@@ -264,6 +276,88 @@
         }
         
     </style>
+    
+    <!-- App Icon Generator Script -->
+    <script>
+        (function() {
+            // 這個腳本會自動生成一個 App Icon 並插入到 head 中
+            function generateAppIcon() {
+                const canvas = document.createElement('canvas');
+                canvas.width = 512;
+                canvas.height = 512;
+                const ctx = canvas.getContext('2d');
+
+                // 1. 繪製背景 (藍色漸層)
+                const gradient = ctx.createLinearGradient(0, 0, 512, 512);
+                gradient.addColorStop(0, '#0EA5E9'); // Sky-500
+                gradient.addColorStop(1, '#3B82F6'); // Blue-500
+                ctx.fillStyle = gradient;
+                // 繪製圓角矩形 (模擬 iOS Icon 形狀)
+                ctx.beginPath();
+                ctx.roundRect(0, 0, 512, 512, 120);
+                ctx.fill();
+
+                // 2. 繪製文字 "43°"
+                ctx.fillStyle = 'white';
+                ctx.font = 'bold 180px "Noto Sans JP", sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.shadowColor = 'rgba(0,0,0,0.2)';
+                ctx.shadowBlur = 20;
+                ctx.fillText('43°', 256, 266);
+
+                // 3. 繪製雪花裝飾 (簡單幾何圖形)
+                ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+                ctx.lineWidth = 10;
+                ctx.beginPath();
+                ctx.moveTo(256, 80); ctx.lineTo(256, 140); // Top
+                ctx.moveTo(256, 372); ctx.lineTo(256, 432); // Bottom
+                ctx.stroke();
+
+                return canvas.toDataURL('image/png');
+            }
+
+            const iconUrl = generateAppIcon();
+
+            // 建立 Link 標籤
+            const links = [
+                { rel: 'icon', href: iconUrl },
+                { rel: 'apple-touch-icon', href: iconUrl }
+            ];
+
+            links.forEach(attr => {
+                const link = document.createElement('link');
+                link.rel = attr.rel;
+                link.href = attr.href;
+                document.head.appendChild(link);
+            });
+
+            // 建立 Web App Manifest (讓 Android 也能安裝成 App)
+            const manifest = {
+                "name": "北緯43°の約定",
+                "short_name": "北海道之旅",
+                "start_url": ".",
+                "display": "standalone",
+                "background_color": "#F0F9FF",
+                "theme_color": "#0EA5E9",
+                "orientation": "portrait",
+                "icons": [{
+                    "src": iconUrl,
+                    "sizes": "512x512",
+                    "type": "image/png"
+                }]
+            };
+            
+            const stringManifest = JSON.stringify(manifest);
+            const blob = new Blob([stringManifest], {type: 'application/json'});
+            const manifestURL = URL.createObjectURL(blob);
+            
+            const linkManifest = document.createElement('link');
+            linkManifest.rel = 'manifest';
+            linkManifest.href = manifestURL;
+            document.head.appendChild(linkManifest);
+        })();
+    </script>
 </head>
 <body class="text-slate-600">
 
@@ -271,7 +365,7 @@
     
     <!-- Background Music -->
     <audio id="bgm" loop>
-        <source src="christmassong.mp3" type="audio/mp3">
+        <source src="christmassong.mp3">
     </audio>
 
     <div id="app" class="relative min-h-screen">
@@ -282,7 +376,7 @@
             <div class="absolute inset-0 bg-gradient-to-t from-[#F0F9FF] via-[#F0F9FF]/20 to-black/30"></div>
             
             <!-- Music Toggle Button -->
-            <button @click="toggleMusic" :class="['music-btn', isMusicPlaying ? 'playing' : '']">
+            <button @click="toggleMusic" :class="['music-btn', isMusicPlaying ? 'playing' : '']" style="top: max(20px, env(safe-area-inset-top));">
                 <i :class="['fas', isMusicPlaying ? 'fa-music' : 'fa-play']"></i>
             </button>
 
@@ -1369,7 +1463,7 @@
                 const flightData = ref([
                     {
                         id: 1, type: 'outbound', typeLabel: '去程', date: '12/22', airline: '全日空航空', 
-                        logo: 'ana.png',
+                        logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e2/ANA_logo_%282023%29.svg/2560px-ANA_logo_%282023%29.svg.png',
                         legs: [
                             { dep: 'HKG', arr: 'HND', depTime: '00:05', arrTime: '04:55', flightNo: 'NH814', aircraft: '波音 787-800', termDep: 'T1', termArr: 'T3', duration: '3h 50m' },
                             { dep: 'HND', arr: 'CTS', depTime: '09:00', arrTime: '10:35', flightNo: 'NH055', aircraft: '波音 787-10', termDep: 'T2', termArr: 'Dom', duration: '1h 35m' }
@@ -1378,7 +1472,7 @@
                     },
                     {
                         id: 2, type: 'inbound', typeLabel: '回程', date: '12/29', airline: '全日空航空',
-                        logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e2/ANA_logo_%282023%29.svg/2560px-ANA_logo_%282023%29.svg.png',
+                        logo: 'ana.png',
                         legs: [
                             { dep: 'CTS', arr: 'HND', depTime: '20:30', arrTime: '22:10', flightNo: 'NH082', aircraft: '波音 777-300', termDep: 'Dom', termArr: 'T2', duration: '1h 40m' },
                             { dep: 'HND', arr: 'HKG', depTime: '<span class="text-[10px] text-orange-500 mr-1">12/30</span>02:00', arrTime: '05:45', flightNo: 'NH813', aircraft: '波音 787-800', termDep: 'T2', termArr: 'T1', duration: '4h 45m' }
@@ -1613,7 +1707,7 @@
 
                 // Shopping List Data
                 const shoppingList = ref([
-                    { id: 1, name: '六花亭奶油夾心餅', note: '要買5盒送同事', owner: 'Kyle', bought: false, image: 'https://www.rokkatei.co.jp/wp-content/uploads/2020/12/10052.jpg' },
+                    { id: 1, name: '六花亭奶油夾心餅', note: '要買5盒送同事', owner: 'Kyle', bought: false, image: 'food.jpg' },
                     { id: 2, name: '藥妝 - 合利他命', note: '幫媽媽買2罐', owner: 'Hayley', bought: false, image: null }
                 ]);
 
