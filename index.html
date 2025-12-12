@@ -379,7 +379,7 @@
                 <div id="schedule-list-container" class="space-y-0 pb-20 min-h-[200px]">
                     <div v-for="(item, index) in currentDaySchedule" :key="item.id" :data-id="item.id" class="schedule-item-wrapper">
                         
-                        <!-- Travel Connector (Now displayed BEFORE the item to indicate "Travel TO this station") -->
+                        <!-- Travel Connector -->
                         <div v-if="item.travelTime" class="travel-connector" @click.stop="withAuth(() => editScheduleItem(item))">
                             <div class="travel-line"></div>
                             <div class="travel-badge">
@@ -404,8 +404,8 @@
                             <div class="flex-1 min-w-0">
                                 <div class="flex items-center gap-2 mb-1">
                                     <span class="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 font-bold">{{ item.categoryLabel }}</span>
-                                    <!-- Google Maps Button -->
-                                    <a :href="'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(item.name)" target="_blank" class="text-[10px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-500 font-bold flex items-center gap-1 hover:bg-blue-100 transition-colors">
+                                    <!-- Google Maps Button (Smart Link) -->
+                                    <a :href="'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(item.address ? item.address : item.name)" target="_blank" class="text-[10px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-500 font-bold flex items-center gap-1 hover:bg-blue-100 transition-colors">
                                         <i class="fas fa-location-arrow text-[9px]"></i> 導航
                                     </a>
                                 </div>
@@ -442,7 +442,6 @@
                 </div>
 
                 <div class="animate-fade-in">
-                    <!-- Flight, Hotel, Tour, Voucher, Other Sections (Same as previous) -->
                     <!-- Flight -->
                     <div v-if="bookingCategory === 'flight'" class="space-y-6">
                         <div v-for="(flight, fIndex) in flightData" :key="fIndex" class="flight-card relative">
@@ -649,7 +648,7 @@
                             </div>
                         </div>
                     </div>
-                    <!-- Other (Currency, Restaurant, etc.) -->
+                    <!-- Other -->
                     <div v-if="bookingCategory === 'other'" class="space-y-6">
                          <!-- Currency -->
                         <section class="bg-white/90 backdrop-blur-sm rounded-2xl p-5 shadow-sm border border-white">
@@ -1068,7 +1067,7 @@
             </div>
         </div>
 
-        <!-- Outfit Modal (NEW) -->
+        <!-- Outfit Modal -->
         <div v-if="showOutfitModal" class="modal-overlay" @click.self="showOutfitModal = false">
             <div class="bg-white w-full max-w-sm rounded-3xl p-6 shadow-2xl">
                 <h3 class="text-lg font-bold mb-4 text-slate-800">編輯穿搭建議</h3>
@@ -1097,22 +1096,38 @@
                         </div>
                     </div>
                     <div><label class="block text-xs font-bold text-slate-400 mb-1">名稱</label><input v-model="scheduleForm.name" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm outline-none" placeholder="行程名稱"></div>
+                    
+                    <!-- NEW: Google Map Address Input -->
+                    <div>
+                        <label class="block text-xs font-bold text-slate-400 mb-1">Google Map 地址 (選填)</label>
+                        <input v-model="scheduleForm.address" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm outline-none" placeholder="留空則預設搜尋行程名稱">
+                    </div>
+
                     <div class="grid grid-cols-2 gap-3">
                         <div><label class="block text-xs font-bold text-slate-400 mb-1">營業時間</label><input v-model="scheduleForm.openingHours" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm outline-none" placeholder="09:00 - 22:00"></div>
                         <div><label class="block text-xs font-bold text-slate-400 mb-1">門票/費用</label><input v-model="scheduleForm.cost" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm outline-none" placeholder="¥1000"></div>
                     </div>
                     <div class="bg-slate-50 p-3 rounded-xl border border-slate-100">
-                        <!-- Label Updated -->
                         <label class="block text-xs font-bold text-sky-600 mb-2"><i class="fas fa-route"></i> 前往該站方式</label>
                         <div class="grid grid-cols-5 gap-2 mb-2">
                             <div @click="scheduleForm.travelMode = 'walk'" :class="['transport-option', scheduleForm.travelMode === 'walk' ? 'active' : 'bg-white']"><i class="fas fa-walking"></i></div>
                             <div @click="scheduleForm.travelMode = 'train'" :class="['transport-option', scheduleForm.travelMode === 'train' ? 'active' : 'bg-white']"><i class="fas fa-train"></i></div>
                             <div @click="scheduleForm.travelMode = 'taxi'" :class="['transport-option', scheduleForm.travelMode === 'taxi' ? 'active' : 'bg-white']"><i class="fas fa-taxi"></i></div>
                             <div @click="scheduleForm.travelMode = 'plane'" :class="['transport-option', scheduleForm.travelMode === 'plane' ? 'active' : 'bg-white']"><i class="fas fa-plane"></i></div>
-                            <!-- Updated: Ship -> Bus -->
                             <div @click="scheduleForm.travelMode = 'bus'" :class="['transport-option', scheduleForm.travelMode === 'bus' ? 'active' : 'bg-white']"><i class="fas fa-bus"></i></div>
                         </div>
-                        <input v-model="scheduleForm.travelTime" class="w-full bg-white border border-slate-200 rounded-lg p-2 text-sm outline-none placeholder-slate-400" placeholder="所需時間 (如: 30分鐘)">
+                        
+                        <!-- UPDATED: Structured Time Input -->
+                        <div class="flex items-center gap-2">
+                            <div class="flex-1 relative">
+                                <input type="number" v-model="scheduleForm.travelHours" min="0" class="w-full bg-white border border-slate-200 rounded-lg p-2 text-sm outline-none text-center" placeholder="0">
+                                <span class="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-slate-400 font-bold">小時</span>
+                            </div>
+                            <div class="flex-1 relative">
+                                <input type="number" v-model="scheduleForm.travelMinutes" min="0" class="w-full bg-white border border-slate-200 rounded-lg p-2 text-sm outline-none text-center" placeholder="0">
+                                <span class="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-slate-400 font-bold">分鐘</span>
+                            </div>
+                        </div>
                     </div>
                     <div><label class="block text-xs font-bold text-slate-400 mb-1">備註</label><input v-model="scheduleForm.note" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm outline-none" placeholder="備註事項"></div>
                     <button @click="saveSchedule" class="w-full bg-sky-500 text-white py-3 rounded-xl font-bold shadow-lg shadow-sky-200 mt-2">{{ isEditingSchedule ? '更新' : '新增' }}</button>
@@ -1479,7 +1494,7 @@
 
                 const currentDayWeather = computed(() => weatherForecast.value[selectedDayIndex.value] || weatherForecast.value[0]);
 
-                // Outfit Edit Logic (NEW)
+                // Outfit Edit Logic
                 const showOutfitModal = ref(false);
                 const outfitForm = ref({ text: '' });
                 const openOutfitModal = () => {
@@ -1613,14 +1628,14 @@
 
                 // Schedule Data
                 const scheduleData = ref([
-                    { date: '22', weekday: 'Mon', items: [{id:1, category:'flight', categoryLabel:'航班', name:'抵達新千歲', startTime:'10:35', note:'NH055', travelTime:'45分鐘', travelMode:'train', openingHours:'', cost:''}] },
-                    { date: '23', weekday: 'Tue', items: [{id:2, category:'sightseeing', categoryLabel:'景點', name:'小樽運河', startTime:'10:00', note:'拍照', travelTime:'15分鐘', travelMode:'walk', openingHours:'24H', cost:'免費'}] },
+                    { date: '22', weekday: 'Mon', items: [{id:1, category:'flight', categoryLabel:'航班', name:'抵達新千歲', startTime:'10:35', note:'NH055', travelTime:'45分鐘', travelMode:'train', openingHours:'', cost:'', address: ''}] },
+                    { date: '23', weekday: 'Tue', items: [{id:2, category:'sightseeing', categoryLabel:'景點', name:'小樽運河', startTime:'10:00', note:'拍照', travelTime:'15分鐘', travelMode:'walk', openingHours:'24H', cost:'免費', address: '小樽運河'}] },
                     { date: '24', weekday: 'Wed', items: [] },
-                    { date: '25', weekday: 'Thu', items: [{id:5, category:'food', categoryLabel:'美食', name:'HOUSE.H 聖誕晚餐', startTime:'18:00', note:'赤れんが庁舎 1F', travelTime:'', travelMode:'', openingHours:'17:30-22:00', cost:'¥14,000'}] },
+                    { date: '25', weekday: 'Thu', items: [{id:5, category:'food', categoryLabel:'美食', name:'HOUSE.H 聖誕晚餐', startTime:'18:00', note:'赤れんが庁舎 1F', travelTime:'', travelMode:'', openingHours:'17:30-22:00', cost:'¥14,000', address: '北海道札幌市中央区北三条西6-1 赤れんが庁舎 1F'}] },
                     { date: '26', weekday: 'Fri', items: [] },
-                    { date: '27', weekday: 'Sat', items: [{id:3, category:'sightseeing', categoryLabel:'景點', name:'一日團集合', startTime:'07:50', note:'大通公園地鐵站31號門', travelTime:'2小時', travelMode:'bus', openingHours:'', cost:''}] },
+                    { date: '27', weekday: 'Sat', items: [{id:3, category:'sightseeing', categoryLabel:'景點', name:'一日團集合', startTime:'07:50', note:'大通公園地鐵站31號門', travelTime:'2小時', travelMode:'bus', openingHours:'', cost:'', address: '大通公園'}] },
                     { date: '28', weekday: 'Sun', items: [] },
-                    { date: '29', weekday: 'Mon', items: [{id:4, category:'flight', categoryLabel:'航班', name:'前往機場', startTime:'18:00', note:'預備搭乘 NH082', travelTime:'', travelMode:'', openingHours:'', cost:''}] },
+                    { date: '29', weekday: 'Mon', items: [{id:4, category:'flight', categoryLabel:'航班', name:'前往機場', startTime:'18:00', note:'預備搭乘 NH082', travelTime:'', travelMode:'', openingHours:'', cost:'', address: '新千歲機場'}] },
                 ]);
                 const currentDaySchedule = computed(() => scheduleData.value[selectedDayIndex.value].items);
 
@@ -1628,10 +1643,80 @@
                 watch([currentTab, selectedDayIndex], () => { if (currentTab.value === 'schedule') nextTick(() => initSortable()); });
                 onMounted(() => { if(currentTab.value === 'schedule') initSortable(); });
 
-                const showScheduleModal = ref(false); const isEditingSchedule = ref(false); const editingScheduleId = ref(null); const scheduleForm = ref({ category: 'sightseeing', name: '', time: '', note: '', travelTime: '', travelMode: 'train', openingHours: '', cost: '' });
-                const openScheduleModal = () => { isEditingSchedule.value = false; scheduleForm.value = { category: 'sightseeing', name: '', time: '', note: '', travelTime: '', travelMode: 'train', openingHours: '', cost: '' }; showScheduleModal.value = true; };
-                const editScheduleItem = (item) => { isEditingSchedule.value = true; editingScheduleId.value = item.id; scheduleForm.value = { ...item, travelMode: item.travelMode || 'train' }; showScheduleModal.value = true; };
-                const saveSchedule = () => { if(!scheduleForm.value.name) return; const newItem = { id: isEditingSchedule.value ? editingScheduleId.value : Date.now(), category: scheduleForm.value.category, categoryLabel: { sightseeing: '景點', transport: '交通', flight: '航班', food: '美食', shopping: '購物', other: '其他' }[scheduleForm.value.category], name: scheduleForm.value.name, startTime: scheduleForm.value.time, note: scheduleForm.value.note, travelTime: scheduleForm.value.travelTime, travelMode: scheduleForm.value.travelMode, openingHours: scheduleForm.value.openingHours, cost: scheduleForm.value.cost }; if (isEditingSchedule.value) { const items = scheduleData.value[selectedDayIndex.value].items; const index = items.findIndex(i => i.id === editingScheduleId.value); if (index !== -1) items[index] = newItem; } else { scheduleData.value[selectedDayIndex.value].items.push(newItem); } showScheduleModal.value = false; };
+                const showScheduleModal = ref(false); 
+                const isEditingSchedule = ref(false); 
+                const editingScheduleId = ref(null); 
+                // Updated form structure with separate time inputs and address
+                const scheduleForm = ref({ category: 'sightseeing', name: '', time: '', note: '', travelHours: 0, travelMinutes: 0, travelMode: 'train', openingHours: '', cost: '', address: '' });
+                
+                const openScheduleModal = () => { 
+                    isEditingSchedule.value = false; 
+                    scheduleForm.value = { category: 'sightseeing', name: '', time: '', note: '', travelHours: 0, travelMinutes: 0, travelMode: 'train', openingHours: '', cost: '', address: '' }; 
+                    showScheduleModal.value = true; 
+                };
+                
+                const editScheduleItem = (item) => { 
+                    isEditingSchedule.value = true; 
+                    editingScheduleId.value = item.id; 
+                    
+                    // Parse travelTime string back to hours/minutes
+                    let h = 0, m = 0;
+                    if (item.travelTime) {
+                        const hMatch = item.travelTime.match(/(\d+)小時/);
+                        const mMatch = item.travelTime.match(/(\d+)分鐘/);
+                        if (hMatch) h = parseInt(hMatch[1]);
+                        if (mMatch) m = parseInt(mMatch[1]);
+                        // Handle case where it might be just "45分鐘" without hours
+                        if (!hMatch && !mMatch && item.travelTime.includes('分鐘')) {
+                             m = parseInt(item.travelTime);
+                        }
+                    }
+
+                    scheduleForm.value = { 
+                        ...item, 
+                        travelMode: item.travelMode || 'train',
+                        travelHours: h,
+                        travelMinutes: m,
+                        address: item.address || ''
+                    }; 
+                    showScheduleModal.value = true; 
+                };
+                
+                const saveSchedule = () => { 
+                    if(!scheduleForm.value.name) return; 
+                    
+                    // Construct travelTime string
+                    let timeStr = '';
+                    if (scheduleForm.value.travelHours > 0) timeStr += `${scheduleForm.value.travelHours}小時`;
+                    if (scheduleForm.value.travelMinutes > 0) {
+                        if (timeStr) timeStr += ' ';
+                        timeStr += `${scheduleForm.value.travelMinutes}分鐘`;
+                    }
+
+                    const newItem = { 
+                        id: isEditingSchedule.value ? editingScheduleId.value : Date.now(), 
+                        category: scheduleForm.value.category, 
+                        categoryLabel: { sightseeing: '景點', transport: '交通', flight: '航班', food: '美食', shopping: '購物', other: '其他' }[scheduleForm.value.category], 
+                        name: scheduleForm.value.name, 
+                        startTime: scheduleForm.value.time, 
+                        note: scheduleForm.value.note, 
+                        travelTime: timeStr, 
+                        travelMode: scheduleForm.value.travelMode, 
+                        openingHours: scheduleForm.value.openingHours, 
+                        cost: scheduleForm.value.cost,
+                        address: scheduleForm.value.address
+                    }; 
+                    
+                    if (isEditingSchedule.value) { 
+                        const items = scheduleData.value[selectedDayIndex.value].items; 
+                        const index = items.findIndex(i => i.id === editingScheduleId.value); 
+                        if (index !== -1) items[index] = newItem; 
+                    } else { 
+                        scheduleData.value[selectedDayIndex.value].items.push(newItem); 
+                    } 
+                    showScheduleModal.value = false; 
+                };
+                
                 const removeScheduleItem = (index) => { if(confirm('確定要刪除此行程嗎？')) scheduleData.value[selectedDayIndex.value].items.splice(index, 1); };
 
                 // Expenses
@@ -1940,7 +2025,6 @@
                 // Helpers & Snow
                 const getCategoryIcon = (cat) => ({ sightseeing: 'fas fa-camera', flight: 'fas fa-plane', transport: 'fas fa-train', food: 'fas fa-utensils', shopping: 'fas fa-shopping-bag', other: 'fas fa-sticky-note' }[cat] || 'fas fa-circle');
                 const getCategoryColor = (cat) => ({ sightseeing: 'bg-emerald-400', flight: 'bg-sky-500', transport: 'bg-blue-500', food: 'bg-orange-400', shopping: 'bg-pink-400', other: 'bg-slate-400' }[cat] || 'bg-slate-400');
-                // Updated: Ship -> Bus
                 const getTransportIcon = (mode) => ({ walk: 'fa-walking', train: 'fa-subway', taxi: 'fa-taxi', plane: 'fa-plane', bus: 'fa-bus' }[mode] || 'fa-car');
                 const getExpenseIcon = (cat) => ({ '飲食': 'fas fa-utensils', '交通': 'fas fa-bus', '住宿': 'fas fa-bed', '門票': 'fas fa-ticket-alt', '購物': 'fas fa-shopping-bag', '其他': 'fas fa-comment-dots' }[cat]);
                 const getExpenseColor = (cat) => ({ '飲食': 'bg-orange-400', '交通': 'bg-blue-500', '住宿': 'bg-indigo-500', '門票': 'bg-pink-500', '購物': 'bg-emerald-400', '其他': 'bg-slate-400' }[cat]);
