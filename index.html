@@ -361,8 +361,8 @@
             <!-- ================= TAB 1: SCHEDULE (行程) ================= -->
             <div v-if="currentTab === 'schedule'">
                 <div class="flex overflow-x-auto gap-3 pb-4 hide-scrollbar mb-2">
-                    <div v-for="(day, index) in scheduleData" :key="index" @click="selectedDayIndex = index"
-                        :class="['flex-shrink-0 w-14 h-16 rounded-xl flex flex-col items-center justify-center border transition-all', selectedDayIndex === index ? 'bg-sky-500 text-white border-sky-500 shadow-lg shadow-sky-200' : 'bg-white/80 border-white text-slate-500']">
+                    <div v-for="(day, index) in scheduleData" :key="index" @click="changeDay(index)"
+                        :class="['flex-shrink-0 w-14 h-16 rounded-xl flex flex-col items-center justify-center border transition-all cursor-pointer', selectedDayIndex === index ? 'bg-sky-500 text-white border-sky-500 shadow-lg shadow-sky-200' : 'bg-white/80 border-white text-slate-500']">
                         <span class="text-xs font-bold opacity-80">{{ day.weekday }}</span>
                         <span class="text-lg font-bold">{{ day.date }}</span>
                     </div>
@@ -1739,6 +1739,11 @@
                     if(currentTab.value === 'schedule') initSortable();
                 });
 
+                // New Function to handle day change safely
+                const changeDay = (index) => {
+                    selectedDayIndex.value = index;
+                };
+
                 const showScheduleModal = ref(false); 
                 const isEditingSchedule = ref(false); 
                 const editingScheduleId = ref(null); 
@@ -2177,7 +2182,9 @@
                     // Outfit
                     showOutfitModal, outfitForm, openOutfitModal, saveOutfit,
                     // Toast
-                    showToast, toastMessage
+                    showToast, toastMessage,
+                    // Fix
+                    changeDay
                 };
             }
         }).mount('#app');
