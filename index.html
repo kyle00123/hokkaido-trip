@@ -415,8 +415,8 @@
                 </section>
 
                 <!-- Schedule List Container with TIMELINE -->
-                <!-- KEY FIX: Use a unique key for the container to force re-render on day change -->
-                <div :key="'schedule-container-' + selectedDayIndex" id="schedule-list-container" class="space-y-0 pb-20 min-h-[200px] relative pl-2">
+                <!-- CRITICAL FIX: v-if="isListActive" forces complete DOM recreation on update -->
+                <div v-if="isListActive" id="schedule-list-container" class="space-y-0 pb-20 min-h-[200px] relative pl-2">
                     <!-- Timeline Line -->
                     <div class="timeline-line-bg"></div>
 
@@ -1701,13 +1701,13 @@
                 ]);
                 const currentDaySchedule = computed(() => scheduleData.value[selectedDayIndex.value].items);
 
-                // --- SortableJS Fix ---
+                // --- CRITICAL FIX: SortableJS & DOM State Management ---
                 let sortableInstance = null;
+                const isListActive = ref(true); // Control DOM existence
 
                 const initSortable = () => {
                     const el = document.getElementById('schedule-list-container');
                     
-                    // Destroy old instance if exists to prevent conflicts
                     if (sortableInstance) {
                         sortableInstance.destroy();
                         sortableInstance = null;
@@ -1719,7 +1719,7 @@
                             handle: '.drag-handle',
                             ghostClass: 'sortable-ghost',
                             onEnd: (evt) => {
-                                // IMPORTANT: Use splice to update Vue's data array to match DOM
+                                // Update data without triggering full re-render immediately
                                 const items = scheduleData.value[selectedDayIndex.value].items;
                                 const item = items.splice(evt.oldIndex, 1)[0];
                                 items.splice(evt.newIndex, 0, item);
@@ -1728,30 +1728,24 @@
                     }
                 };
 
-                // CRITICAL FIX: Watch for selectedDayIndex changes to re-init Sortable
-                // We use nextTick to ensure DOM is updated before re-initializing
-                watch(selectedDayIndex, async () => {
-                    if (currentTab.value === 'schedule') {
-                        // Destroy first
-                        if (sortableInstance) {
-                            sortableInstance.destroy();
-                            sortableInstance = null;
-                        }
-                        await nextTick();
-                        initSortable();
+                // The "Nuclear Option": Force Vue to destroy and recreate the list DOM
+                // This ensures all event listeners are fresh and not zombie elements
+                const reloadScheduleDOM = async () => {
+                    if (sortableInstance) {
+                        sortableInstance.destroy();
+                        sortableInstance = null;
                     }
-                });
-
-                // Also init on mount if starting on schedule tab
-                onMounted(() => {
-                    if(currentTab.value === 'schedule') initSortable();
-                });
+                    isListActive.value = false; // Destroy DOM
+                    await nextTick();
+                    isListActive.value = true; // Recreate DOM
+                    await nextTick();
+                    initSortable();
+                };
 
                 // Watch tab change
                 watch(currentTab, async (newVal) => {
                     if (newVal === 'schedule') {
-                        await nextTick();
-                        initSortable();
+                        await reloadScheduleDOM();
                     } else {
                          if (sortableInstance) {
                             sortableInstance.destroy();
@@ -1760,9 +1754,10 @@
                     }
                 });
 
-                // New Function to handle day change safely
-                const changeDay = (index) => {
+                // Handle day change safely with DOM reset
+                const changeDay = async (index) => {
                     selectedDayIndex.value = index;
+                    await reloadScheduleDOM();
                 };
 
                 const showScheduleModal = ref(false); 
@@ -1838,12 +1833,16 @@
                     
                     showScheduleModal.value = false; 
                     
-                    // Force Sortable re-init after DOM update to prevent ghost elements or broken listeners
-                    await nextTick();
-                    initSortable();
+                    // Force complete DOM reload to ensure buttons work on new items
+                    await reloadScheduleDOM();
                 };
                 
-                const removeScheduleItem = (index) => { if(confirm('確定要刪除此行程嗎？')) scheduleData.value[selectedDayIndex.value].items.splice(index, 1); };
+                const removeScheduleItem = async (index) => { 
+                    if(confirm('確定要刪除此行程嗎？')) {
+                        scheduleData.value[selectedDayIndex.value].items.splice(index, 1);
+                        await reloadScheduleDOM();
+                    }
+                };
 
                 // Expenses
                 const expenseMode = ref('list'); 
@@ -2175,6 +2174,11 @@
                 onMounted(() => {
                     const snowContainer = document.getElementById('snow-container');
                     for(let i=0; i<30; i++) { const flake = document.createElement('div'); flake.classList.add('snowflake'); const size = Math.random() * 5 + 2 + 'px'; flake.style.width = size; flake.style.height = size; flake.style.left = Math.random() * 100 + 'vw'; flake.style.animationDuration = Math.random() * 5 + 5 + 's'; flake.style.animationDelay = Math.random() * 5 + 's'; snowContainer.appendChild(flake); }
+                    
+                    // Initial load
+                    if(currentTab.value === 'schedule') {
+                        initSortable();
+                    }
                 });
 
                 return {
@@ -2206,7 +2210,7 @@
                     // Toast
                     showToast, toastMessage,
                     // Fix
-                    changeDay
+                    changeDay, isListActive
                 };
             }
         }).mount('#app');
