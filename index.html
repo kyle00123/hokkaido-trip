@@ -415,7 +415,8 @@
                 </section>
 
                 <!-- Schedule List Container with TIMELINE -->
-                <div :key="selectedDayIndex" id="schedule-list-container" class="space-y-0 pb-20 min-h-[200px] relative pl-2">
+                <!-- KEY FIX: Use a unique key for the container to force re-render on day change -->
+                <div :key="'schedule-container-' + selectedDayIndex" id="schedule-list-container" class="space-y-0 pb-20 min-h-[200px] relative pl-2">
                     <!-- Timeline Line -->
                     <div class="timeline-line-bg"></div>
 
@@ -1718,8 +1719,8 @@
                             handle: '.drag-handle',
                             ghostClass: 'sortable-ghost',
                             onEnd: (evt) => {
+                                // IMPORTANT: Use splice to update Vue's data array to match DOM
                                 const items = scheduleData.value[selectedDayIndex.value].items;
-                                // Move item in array
                                 const item = items.splice(evt.oldIndex, 1)[0];
                                 items.splice(evt.newIndex, 0, item);
                             }
@@ -1727,16 +1728,36 @@
                     }
                 };
 
-                // Watch for tab change OR day change to re-init sortable
-                watch([currentTab, selectedDayIndex], () => {
+                // CRITICAL FIX: Watch for selectedDayIndex changes to re-init Sortable
+                // We use nextTick to ensure DOM is updated before re-initializing
+                watch(selectedDayIndex, async () => {
                     if (currentTab.value === 'schedule') {
-                        nextTick(() => initSortable());
+                        // Destroy first
+                        if (sortableInstance) {
+                            sortableInstance.destroy();
+                            sortableInstance = null;
+                        }
+                        await nextTick();
+                        initSortable();
                     }
                 });
 
                 // Also init on mount if starting on schedule tab
                 onMounted(() => {
                     if(currentTab.value === 'schedule') initSortable();
+                });
+
+                // Watch tab change
+                watch(currentTab, async (newVal) => {
+                    if (newVal === 'schedule') {
+                        await nextTick();
+                        initSortable();
+                    } else {
+                         if (sortableInstance) {
+                            sortableInstance.destroy();
+                            sortableInstance = null;
+                        }
+                    }
                 });
 
                 // New Function to handle day change safely
@@ -1782,7 +1803,7 @@
                     showScheduleModal.value = true; 
                 };
                 
-                const saveSchedule = () => { 
+                const saveSchedule = async () => { 
                     if(!scheduleForm.value.name) return; 
                     
                     let timeStr = '';
@@ -1817,8 +1838,9 @@
                     
                     showScheduleModal.value = false; 
                     
-                    // Force Sortable re-init after DOM update
-                    nextTick(() => initSortable());
+                    // Force Sortable re-init after DOM update to prevent ghost elements or broken listeners
+                    await nextTick();
+                    initSortable();
                 };
                 
                 const removeScheduleItem = (index) => { if(confirm('確定要刪除此行程嗎？')) scheduleData.value[selectedDayIndex.value].items.splice(index, 1); };
