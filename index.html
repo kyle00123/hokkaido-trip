@@ -360,8 +360,9 @@
             
             <!-- ================= TAB 1: SCHEDULE (行程) ================= -->
             <div v-if="currentTab === 'schedule'">
-                <div class="flex overflow-x-auto gap-3 pb-4 hide-scrollbar mb-2">
-                    <div v-for="(day, index) in scheduleData" :key="index" @click="changeDay(index)"
+                <!-- Date Selector with ID for scrolling -->
+                <div ref="dateScrollContainer" class="flex overflow-x-auto gap-3 pb-4 hide-scrollbar mb-2">
+                    <div v-for="(day, index) in scheduleData" :key="index" :id="'day-btn-' + index" @click="changeDay(index)"
                         :class="['flex-shrink-0 w-14 h-16 rounded-xl flex flex-col items-center justify-center border transition-all cursor-pointer', selectedDayIndex === index ? 'bg-sky-500 text-white border-sky-500 shadow-lg shadow-sky-200' : 'bg-white/80 border-white text-slate-500']">
                         <span class="text-xs font-bold opacity-80">{{ day.weekday }}</span>
                         <span class="text-lg font-bold">{{ day.date }}</span>
@@ -1425,6 +1426,7 @@
                 const currentTab = ref('schedule');
                 const selectedDayIndex = ref(0);
                 const bookingCategory = ref('tour'); 
+                const dateScrollContainer = ref(null);
 
                 // Toast Logic
                 const showToast = ref(false);
@@ -1713,13 +1715,13 @@
                         sortableInstance = null;
                     }
 
+                    // Safety check: ensure element exists
                     if (el) {
                         sortableInstance = new Sortable(el, {
                             animation: 150,
                             handle: '.drag-handle',
                             ghostClass: 'sortable-ghost',
                             onEnd: (evt) => {
-                                // Update data without triggering full re-render immediately
                                 const items = scheduleData.value[selectedDayIndex.value].items;
                                 const item = items.splice(evt.oldIndex, 1)[0];
                                 items.splice(evt.newIndex, 0, item);
@@ -1728,19 +1730,37 @@
                     }
                 };
 
-                // The "Key Change" Strategy: 
-                // By incrementing this key, Vue treats the container as a new element
-                // and completely rebuilds the DOM. This fixes "zombie button" issues.
                 const refreshScheduleDOM = async () => {
                     listKey.value++; // Force re-render
                     await nextTick();
                     initSortable();
                 };
 
+                // New Helper: Scroll selected day into view
+                const scrollToSelectedDay = () => {
+                    const container = dateScrollContainer.value;
+                    const activeBtn = document.getElementById('day-btn-' + selectedDayIndex.value);
+                    if (container && activeBtn) {
+                        const containerWidth = container.clientWidth;
+                        const btnLeft = activeBtn.offsetLeft;
+                        const btnWidth = activeBtn.clientWidth;
+                        // Center the button
+                        const scrollLeft = btnLeft - (containerWidth / 2) + (btnWidth / 2);
+                        container.scrollTo({
+                            left: scrollLeft,
+                            behavior: 'smooth'
+                        });
+                    }
+                };
+
                 // Watch tab change
                 watch(currentTab, async (newVal) => {
                     if (newVal === 'schedule') {
                         await refreshScheduleDOM();
+                        // Wait for DOM to be ready then scroll to saved date
+                        setTimeout(() => {
+                            scrollToSelectedDay();
+                        }, 100);
                     } else {
                          if (sortableInstance) {
                             sortableInstance.destroy();
@@ -1749,10 +1769,11 @@
                     }
                 });
 
-                // Handle day change safely with DOM reset
+                // Handle day change safely with DOM reset & Scroll
                 const changeDay = async (index) => {
                     selectedDayIndex.value = index;
                     await refreshScheduleDOM();
+                    scrollToSelectedDay();
                 };
 
                 const showScheduleModal = ref(false); 
@@ -2205,7 +2226,7 @@
                     // Toast
                     showToast, toastMessage,
                     // Fix
-                    changeDay, listKey
+                    changeDay, listKey, dateScrollContainer
                 };
             }
         }).mount('#app');
