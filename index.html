@@ -415,8 +415,8 @@
                 </section>
 
                 <!-- Schedule List Container with TIMELINE -->
-                <!-- CRITICAL FIX: v-if="isListActive" forces complete DOM recreation on update -->
-                <div v-if="isListActive" id="schedule-list-container" class="space-y-0 pb-20 min-h-[200px] relative pl-2">
+                <!-- CRITICAL FIX: The key ensures the entire container is re-rendered when listKey changes -->
+                <div :key="listKey" id="schedule-list-container" class="space-y-0 pb-20 min-h-[200px] relative pl-2">
                     <!-- Timeline Line -->
                     <div class="timeline-line-bg"></div>
 
@@ -1703,7 +1703,7 @@
 
                 // --- CRITICAL FIX: SortableJS & DOM State Management ---
                 let sortableInstance = null;
-                const isListActive = ref(true); // Control DOM existence
+                const listKey = ref(0); // Unique key to force re-render
 
                 const initSortable = () => {
                     const el = document.getElementById('schedule-list-container');
@@ -1728,16 +1728,11 @@
                     }
                 };
 
-                // The "Nuclear Option": Force Vue to destroy and recreate the list DOM
-                // This ensures all event listeners are fresh and not zombie elements
-                const reloadScheduleDOM = async () => {
-                    if (sortableInstance) {
-                        sortableInstance.destroy();
-                        sortableInstance = null;
-                    }
-                    isListActive.value = false; // Destroy DOM
-                    await nextTick();
-                    isListActive.value = true; // Recreate DOM
+                // The "Key Change" Strategy: 
+                // By incrementing this key, Vue treats the container as a new element
+                // and completely rebuilds the DOM. This fixes "zombie button" issues.
+                const refreshScheduleDOM = async () => {
+                    listKey.value++; // Force re-render
                     await nextTick();
                     initSortable();
                 };
@@ -1745,7 +1740,7 @@
                 // Watch tab change
                 watch(currentTab, async (newVal) => {
                     if (newVal === 'schedule') {
-                        await reloadScheduleDOM();
+                        await refreshScheduleDOM();
                     } else {
                          if (sortableInstance) {
                             sortableInstance.destroy();
@@ -1757,7 +1752,7 @@
                 // Handle day change safely with DOM reset
                 const changeDay = async (index) => {
                     selectedDayIndex.value = index;
-                    await reloadScheduleDOM();
+                    await refreshScheduleDOM();
                 };
 
                 const showScheduleModal = ref(false); 
@@ -1834,13 +1829,13 @@
                     showScheduleModal.value = false; 
                     
                     // Force complete DOM reload to ensure buttons work on new items
-                    await reloadScheduleDOM();
+                    await refreshScheduleDOM();
                 };
                 
                 const removeScheduleItem = async (index) => { 
                     if(confirm('確定要刪除此行程嗎？')) {
                         scheduleData.value[selectedDayIndex.value].items.splice(index, 1);
-                        await reloadScheduleDOM();
+                        await refreshScheduleDOM();
                     }
                 };
 
@@ -2210,7 +2205,7 @@
                     // Toast
                     showToast, toastMessage,
                     // Fix
-                    changeDay, isListActive
+                    changeDay, listKey
                 };
             }
         }).mount('#app');
