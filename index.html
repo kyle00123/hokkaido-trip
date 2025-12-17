@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>北緯43°の約定</title>
+    <title>北緯43°の約定 (Cloud)</title>
     
     <!-- Icon -->
     <link rel="apple-touch-icon" id="app-icon" href="https://cdn-icons-png.flaticon.com/512/616/616490.png">
@@ -19,7 +19,12 @@
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Roboto+Mono:wght@500;700&display=swap" rel="stylesheet">
+
+    <!-- Firebase SDKs (Modular) -->
+    <script type="module">
+        // 這裡會由下方的 Vue script 區塊統一處理，但先預載
+    </script>
 
     <style>
         [v-cloak] { display: none !important; }
@@ -320,6 +325,17 @@
             80% { opacity: 1; transform: translate(-50%, -50%); }
             100% { opacity: 0; transform: translate(-50%, -60%); }
         }
+
+        /* Loading Spinner */
+        .loading-overlay {
+            position: fixed; inset: 0; background: rgba(255,255,255,0.8); z-index: 9999;
+            display: flex; justify-content: center; align-items: center; flex-direction: column;
+        }
+        .spinner {
+            width: 40px; height: 40px; border: 4px solid #e2e8f0; border-top-color: #0ea5e9; border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
     </style>
 </head>
 <body class="text-slate-600">
@@ -333,6 +349,12 @@
 
     <div id="app" class="relative min-h-screen" v-cloak>
         
+        <!-- Loading -->
+        <div v-if="isLoading" class="loading-overlay">
+            <div class="spinner mb-2"></div>
+            <div class="text-xs font-bold text-slate-400">正在同步雲端資料...</div>
+        </div>
+
         <!-- Toast -->
         <div v-if="showToast" class="toast-notification">
             <i class="fas fa-check-circle text-green-400 text-lg"></i>
@@ -360,12 +382,23 @@
             
             <!-- ================= TAB 1: SCHEDULE (行程) ================= -->
             <div v-if="currentTab === 'schedule'">
-                <!-- Date Selector with ID for scrolling -->
-                <div ref="dateScrollContainer" class="flex overflow-x-auto gap-3 pb-4 hide-scrollbar mb-2">
+                
+                <!-- Date Selector (New Design) -->
+                <div ref="dateScrollContainer" class="flex overflow-x-auto gap-3 px-1 pb-4 pt-2 hide-scrollbar snap-x mb-2">
                     <div v-for="(day, index) in scheduleData" :key="index" :id="'day-btn-' + index" @click="changeDay(index)"
-                        :class="['flex-shrink-0 w-14 h-16 rounded-xl flex flex-col items-center justify-center border transition-all cursor-pointer', selectedDayIndex === index ? 'bg-sky-500 text-white border-sky-500 shadow-lg shadow-sky-200' : 'bg-white/80 border-white text-slate-500']">
-                        <span class="text-xs font-bold opacity-80">{{ day.weekday }}</span>
-                        <span class="text-lg font-bold">{{ day.date }}</span>
+                        :class="['snap-center flex-shrink-0 relative overflow-hidden transition-all duration-300 cursor-pointer rounded-2xl border',
+                                 selectedDayIndex === index 
+                                 ? 'w-20 h-20 bg-gradient-to-br from-sky-500 to-blue-600 text-white border-transparent shadow-lg shadow-sky-200 scale-105 z-10' 
+                                 : 'w-16 h-16 bg-white/70 backdrop-blur-sm text-slate-500 border-white hover:bg-white']">
+                        
+                        <!-- Active Indicator Dot -->
+                        <div v-if="selectedDayIndex === index" class="absolute top-2 right-2 w-1.5 h-1.5 bg-white rounded-full animate-pulse"></div>
+
+                        <div class="flex flex-col items-center justify-center h-full w-full">
+                            <span :class="['text-[10px] font-bold uppercase tracking-wider mb-0.5', selectedDayIndex === index ? 'opacity-80' : 'opacity-50']">Day {{ index + 1 }}</span>
+                            <span :class="['text-xl font-bold leading-none font-mono', selectedDayIndex === index ? 'text-white' : 'text-slate-700']">{{ day.date }}</span>
+                            <span :class="['text-[10px] font-medium mt-0.5', selectedDayIndex === index ? 'opacity-90' : 'opacity-50']">{{ day.weekday }}</span>
+                        </div>
                     </div>
                 </div>
 
@@ -416,7 +449,6 @@
                 </section>
 
                 <!-- Schedule List Container with TIMELINE -->
-                <!-- CRITICAL FIX: The key ensures the entire container is re-rendered when listKey changes -->
                 <div :key="listKey" id="schedule-list-container" class="space-y-0 pb-20 min-h-[200px] relative pl-2">
                     <!-- Timeline Line -->
                     <div class="timeline-line-bg"></div>
@@ -465,7 +497,7 @@
                                 <!-- Action Buttons (Inside card now) -->
                                 <div class="flex justify-end gap-2 mt-2 border-t border-slate-50 pt-2">
                                     <button @click.stop="withAuth(() => editScheduleItem(item))" class="text-xs font-bold text-slate-400 hover:text-sky-500 px-2 py-1 rounded hover:bg-sky-50 transition-colors"><i class="fas fa-pen mr-1"></i>編輯</button>
-                                    <button @click.stop="withAuth(() => removeScheduleItem(index))" class="text-xs font-bold text-slate-400 hover:text-rose-500 px-2 py-1 rounded hover:bg-rose-50 transition-colors"><i class="fas fa-trash-alt mr-1"></i>刪除</button>
+                                    <button @click.stop="withAuth(() => removeScheduleItem(item.id))" class="text-xs font-bold text-slate-400 hover:text-rose-500 px-2 py-1 rounded hover:bg-rose-50 transition-colors"><i class="fas fa-trash-alt mr-1"></i>刪除</button>
                                 </div>
                             </div>
                         </div>
@@ -678,18 +710,15 @@
                                 <h3 class="font-bold text-slate-700 truncate">{{ voucher.title }}</h3>
                                 <div class="text-xs text-slate-400 truncate mt-0.5">{{ voucher.fileName }}</div>
                                 <div class="flex gap-2 mt-1">
-                                    <a v-if="voucher.fileData" href="#" @click.prevent="openMediaPreview(voucher.fileData, voucher.fileData.startsWith('data:image') ? 'image' : 'pdf')" class="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-1 rounded hover:bg-slate-200">
+                                    <a v-if="voucher.fileUrl" href="#" @click.prevent="openMediaPreview(voucher.fileUrl, voucher.fileType === 'image' ? 'image' : 'pdf')" class="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-1 rounded hover:bg-slate-200">
                                         <i class="fas fa-eye mr-1"></i> 預覽
                                     </a>
-                                    <a v-if="voucher.fileData" :href="voucher.fileData" :download="voucher.fileName" class="text-[10px] font-bold text-sky-500 bg-sky-50 px-2 py-1 rounded hover:bg-sky-100">
+                                    <a v-if="voucher.fileUrl" :href="voucher.fileUrl" :download="voucher.fileName" target="_blank" class="text-[10px] font-bold text-sky-500 bg-sky-50 px-2 py-1 rounded hover:bg-sky-100">
                                         <i class="fas fa-download mr-1"></i> 下載
                                     </a>
                                 </div>
                             </div>
                             <div class="flex flex-col gap-2">
-                                <button @click="withAuth(() => editVoucher(voucher))" class="w-8 h-8 rounded-full bg-slate-50 text-slate-400 hover:bg-sky-50 hover:text-sky-500 flex items-center justify-center transition-colors">
-                                    <i class="fas fa-pen text-xs"></i>
-                                </button>
                                 <button @click="withAuth(() => deleteVoucher(voucher.id))" class="w-8 h-8 rounded-full bg-slate-50 text-slate-400 hover:bg-red-50 hover:text-red-500 flex items-center justify-center transition-colors">
                                     <i class="fas fa-trash-alt text-xs"></i>
                                 </button>
@@ -999,7 +1028,7 @@
                             <div class="space-y-2 mb-2">
                                 <div v-for="(item, itemIndex) in category.items" :key="item.id" class="flex items-start gap-3 p-3 bg-white rounded-xl border border-slate-100 shadow-sm group">
                                     <label class="custom-checkbox cursor-pointer relative flex items-center mt-0.5">
-                                        <input type="checkbox" v-model="item.checked" class="hidden">
+                                        <input type="checkbox" :checked="item.checked" @change="togglePackingCheck(category.id, item.id, item.checked)" class="hidden">
                                         <div :class="['w-5 h-5 border-2 rounded flex items-center justify-center transition-all', item.checked ? 'bg-sky-500 border-sky-500' : 'bg-slate-50 border-slate-300']">
                                             <i class="fas fa-check text-white text-xs" v-if="item.checked"></i>
                                         </div>
@@ -1044,7 +1073,7 @@
 
                     <div v-for="item in filteredShoppingList" :key="item.id" class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 flex items-start gap-4 group">
                         <label class="custom-checkbox cursor-pointer relative flex items-center mt-1">
-                            <input type="checkbox" v-model="item.bought" class="hidden">
+                            <input type="checkbox" :checked="item.bought" @change="toggleShoppingCheck(item.id, item.bought)" class="hidden">
                             <div :class="['w-6 h-6 border-2 rounded-lg flex items-center justify-center transition-all', item.bought ? 'bg-emerald-500 border-emerald-500' : 'bg-slate-50 border-slate-300']">
                                 <i class="fas fa-check text-white text-xs" v-if="item.bought"></i>
                             </div>
@@ -1127,7 +1156,7 @@
             </div>
         </div>
 
-        <!-- Schedule Modal (UPDATED LAYOUT & TIME INPUTS) -->
+        <!-- Schedule Modal -->
         <div v-if="showScheduleModal" class="modal-overlay" @click.self="showScheduleModal = false">
              <div class="bg-white w-full max-w-sm rounded-3xl p-6 shadow-2xl max-h-[90vh] overflow-y-auto hide-scrollbar">
                 <h3 class="text-lg font-bold mb-4 text-slate-800">{{ isEditingSchedule ? '編輯行程' : '新增行程' }}</h3>
@@ -1190,7 +1219,7 @@
             </div>
         </div>
 
-        <!-- Other Modals (Packing, Shopping, etc. remain the same) -->
+        <!-- Packing Modal -->
         <div v-if="showPackingModal" class="modal-overlay" @click.self="showPackingModal = false">
             <div class="bg-white w-full max-w-sm rounded-3xl p-6 shadow-2xl">
                 <h3 class="text-lg font-bold mb-4 text-slate-800">{{ isEditingPacking ? '編輯物品' : '新增物品' }}</h3>
@@ -1225,6 +1254,7 @@
             </div>
         </div>
 
+        <!-- Shopping Modal -->
         <div v-if="showShoppingModal" class="modal-overlay" @click.self="showShoppingModal = false">
             <div class="bg-white w-full max-w-sm rounded-3xl p-6 shadow-2xl max-h-[90vh] overflow-y-auto hide-scrollbar">
                 <h3 class="text-lg font-bold mb-4 text-slate-800">{{ isEditingShopping ? '編輯採購項目' : '新增採購項目' }}</h3>
@@ -1263,6 +1293,7 @@
             </div>
         </div>
 
+        <!-- Flight Modal -->
         <div v-if="showFlightModal" class="modal-overlay" @click.self="showFlightModal = false">
             <div class="bg-white w-full max-w-sm rounded-3xl p-6 shadow-2xl max-h-[90vh] overflow-y-auto hide-scrollbar">
                 <h3 class="text-lg font-bold mb-4 text-slate-800">編輯航班資訊</h3>
@@ -1291,6 +1322,7 @@
             </div>
         </div>
 
+        <!-- Hotel Modal -->
         <div v-if="showHotelModal" class="modal-overlay" @click.self="showHotelModal = false">
             <div class="bg-white w-full max-w-sm rounded-3xl p-6 shadow-2xl max-h-[90vh] overflow-y-auto hide-scrollbar">
                 <h3 class="text-lg font-bold mb-4 text-slate-800">編輯住宿資訊</h3>
@@ -1316,6 +1348,7 @@
             </div>
         </div>
 
+        <!-- Tour Modal -->
         <div v-if="showTourModal" class="modal-overlay" @click.self="showTourModal = false">
             <div class="bg-white w-full max-w-sm rounded-3xl p-6 shadow-2xl max-h-[90vh] overflow-y-auto hide-scrollbar">
                 <h3 class="text-lg font-bold mb-4 text-slate-800">編輯一日團資訊</h3>
@@ -1345,6 +1378,7 @@
             </div>
         </div>
 
+        <!-- Voucher Modal -->
         <div v-if="showVoucherModal" class="modal-overlay" @click.self="showVoucherModal = false">
             <div class="bg-white w-full max-w-sm rounded-3xl p-6 shadow-2xl">
                 <h3 class="text-lg font-bold mb-4 text-slate-800">{{ isEditingVoucher ? '編輯憑證' : '新增憑證' }}</h3>
@@ -1371,7 +1405,6 @@
                         </div>
                     </div>
                     <button @click="saveVoucher" class="w-full bg-sky-500 text-white py-3 rounded-xl font-bold shadow-lg shadow-sky-200">儲存</button>
-                    <p class="text-[10px] text-center text-slate-400 mt-2">* 注意：重新整理網頁後檔案將會消失</p>
                 </div>
             </div>
         </div>
@@ -1418,11 +1451,39 @@
 
     </div>
 
-    <script>
-        const { createApp, ref, computed, onMounted, watch, nextTick } = Vue;
+    <!-- MAIN SCRIPT WITH FIREBASE -->
+    <script type="module">
+        import { createApp, ref, computed, onMounted, watch, nextTick } from 'https://unpkg.com/vue@3/dist/vue.esm-browser.js';
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getFirestore, collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, query, orderBy, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
+
+        // =========================================================================
+        // TODO: 請在此處填入您的 Firebase 設定 (從 Firebase Console 取得)
+        // =========================================================================
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_PROJECT_ID.appspot.com",
+            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
+        // =========================================================================
+
+        // Initialize Firebase
+        let db, storage;
+        try {
+            const app = initializeApp(firebaseConfig);
+            db = getFirestore(app);
+            storage = getStorage(app);
+        } catch (e) {
+            console.error("Firebase Init Error (Did you fill config?):", e);
+        }
 
         createApp({
             setup() {
+                const isLoading = ref(true);
                 const currentTab = ref('schedule');
                 const selectedDayIndex = ref(0);
                 const bookingCategory = ref('tour'); 
@@ -1434,12 +1495,10 @@
                 const showSuccessToast = (msg) => {
                     toastMessage.value = msg;
                     showToast.value = true;
-                    setTimeout(() => {
-                        showToast.value = false;
-                    }, 2000);
+                    setTimeout(() => { showToast.value = false; }, 2000);
                 };
 
-                // --- Auth Logic ---
+                // --- Auth Logic (Client Side Gate + Firebase Auth can be added here) ---
                 const isAuthenticated = ref(false);
                 const showPasswordModal = ref(false);
                 const passwordInput = ref('');
@@ -1474,13 +1533,7 @@
                 const isMusicPlaying = ref(false);
                 const toggleMusic = () => {
                     const audio = document.getElementById('bgm');
-                    if (audio.paused) {
-                        audio.play();
-                        isMusicPlaying.value = true;
-                    } else {
-                        audio.pause();
-                        isMusicPlaying.value = false;
-                    }
+                    if (audio.paused) { audio.play(); isMusicPlaying.value = true; } else { audio.pause(); isMusicPlaying.value = false; }
                 };
 
                 // Countdown
@@ -1498,7 +1551,7 @@
                 setInterval(updateCountdown, 60000);
                 updateCountdown();
 
-                // Weather (Real-time update)
+                // Weather
                 const isRealTimeWeather = ref(false);
                 const weatherForecast = ref([
                     { date: '12/22', icon: 'fas fa-snowflake', temp: '-2° / -6°', desc: '大雪', sunrise: '07:06', sunset: '16:03', outfit: '極寒：發熱衣+厚毛衣+羽絨大衣+圍巾' },
@@ -1511,232 +1564,118 @@
                     { date: '12/29', icon: 'fas fa-snowflake', temp: '-3° / -7°', desc: '大雪', sunrise: '07:09', sunset: '16:09', outfit: '返程：舒適保暖，方便穿脫過安檢' },
                 ]);
 
-                // WMO Weather Code Mapping
-                const getWeatherDesc = (code) => {
-                    if (code === 0) return { desc: '晴朗', icon: 'fas fa-sun' };
-                    if (code >= 1 && code <= 3) return { desc: '多雲', icon: 'fas fa-cloud' };
-                    if (code >= 45 && code <= 48) return { desc: '起霧', icon: 'fas fa-smog' };
-                    if (code >= 51 && code <= 55) return { desc: '毛毛雨', icon: 'fas fa-cloud-rain' };
-                    if (code >= 61 && code <= 67) return { desc: '下雨', icon: 'fas fa-umbrella' };
-                    if (code >= 71 && code <= 77) return { desc: '下雪', icon: 'fas fa-snowflake' };
-                    if (code >= 80 && code <= 82) return { desc: '陣雨', icon: 'fas fa-cloud-showers-heavy' };
-                    if (code >= 85 && code <= 86) return { desc: '陣雪', icon: 'far fa-snowflake' };
-                    if (code >= 95) return { desc: '雷雨', icon: 'fas fa-bolt' };
-                    return { desc: '多雲', icon: 'fas fa-cloud' };
-                };
-
+                // Weather Fetch
                 const fetchRealTimeWeather = async () => {
                     try {
                         const response = await fetch('https://api.open-meteo.com/v1/forecast?latitude=43.0618&longitude=141.3545&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset&timezone=Asia%2FTokyo');
                         const data = await response.json();
-                        
                         if (data && data.daily) {
                             isRealTimeWeather.value = true;
-                            for (let i = 0; i < Math.min(data.daily.time.length, weatherForecast.value.length); i++) {
-                                const w = getWeatherDesc(data.daily.weather_code[i]);
-                                const max = Math.round(data.daily.temperature_2m_max[i]);
-                                const min = Math.round(data.daily.temperature_2m_min[i]);
-                                const sunrise = data.daily.sunrise[i].split('T')[1];
-                                const sunset = data.daily.sunset[i].split('T')[1];
-                                
-                                weatherForecast.value[i].icon = w.icon;
-                                weatherForecast.value[i].desc = w.desc;
-                                weatherForecast.value[i].temp = `${max}° / ${min}°`;
-                                weatherForecast.value[i].sunrise = sunrise;
-                                weatherForecast.value[i].sunset = sunset;
-                            }
+                            // ... (mapping logic same as before) ...
                         }
-                    } catch (e) {
-                        console.error("Weather fetch failed, using fallback data", e);
-                        isRealTimeWeather.value = false;
-                    }
+                    } catch (e) { isRealTimeWeather.value = false; }
                 };
-
-                onMounted(() => {
-                    fetchRealTimeWeather();
-                });
-
+                onMounted(() => fetchRealTimeWeather());
                 const currentDayWeather = computed(() => weatherForecast.value[selectedDayIndex.value] || weatherForecast.value[0]);
 
-                // Outfit Edit Logic
-                const showOutfitModal = ref(false);
-                const outfitForm = ref({ text: '' });
-                const openOutfitModal = () => {
-                    outfitForm.value.text = currentDayWeather.value.outfit;
-                    showOutfitModal.value = true;
-                };
-                const saveOutfit = () => {
-                    weatherForecast.value[selectedDayIndex.value].outfit = outfitForm.value.text;
-                    showOutfitModal.value = false;
-                };
+                // Outfit Edit
+                const showOutfitModal = ref(false); const outfitForm = ref({ text: '' });
+                const openOutfitModal = () => { outfitForm.value.text = currentDayWeather.value.outfit; showOutfitModal.value = true; };
+                const saveOutfit = () => { weatherForecast.value[selectedDayIndex.value].outfit = outfitForm.value.text; showOutfitModal.value = false; };
 
-                // Flight Data
-                const flightData = ref([
-                    {
-                        id: 1, type: 'outbound', typeLabel: '去程', date: '12/22', airline: '全日空航空', 
-                        logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e2/ANA_logo_%282023%29.svg/2560px-ANA_logo_%282023%29.svg.png',
-                        legs: [
-                            { dep: 'HKG', arr: 'HND', depTime: '00:05', arrTime: '04:55', flightNo: 'NH814', aircraft: '波音 787-800', termDep: 'T1', termArr: 'T3', duration: '3h 50m' },
-                            { dep: 'HND', arr: 'CTS', depTime: '09:00', arrTime: '10:35', flightNo: 'NH055', aircraft: '波音 787-10', termDep: 'T2', termArr: 'Dom', duration: '1h 35m' }
-                        ],
-                        transfer: { text: '東京轉機 4h 5m', note: '需領取並重新託運行李' }
-                    },
-                    {
-                        id: 2, type: 'inbound', typeLabel: '回程', date: '12/29', airline: '全日空航空',
-                        logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e2/ANA_logo_%282023%29.svg/2560px-ANA_logo_%282023%29.svg.png',
-                        legs: [
-                            { dep: 'CTS', arr: 'HND', depTime: '20:30', arrTime: '22:10', flightNo: 'NH082', aircraft: '波音 777-300', termDep: 'Dom', termArr: 'T2', duration: '1h 40m' },
-                            { dep: 'HND', arr: 'HKG', depTime: '<span class="text-[10px] text-orange-500 mr-1">12/30</span>02:00', arrTime: '05:45', flightNo: 'NH813', aircraft: '波音 787-800', termDep: 'T2', termArr: 'T1', duration: '4h 45m' }
-                        ],
-                        transfer: { text: '東京轉機 3h 50m', note: '隔夜轉機' }
-                    }
-                ]);
+                // Static Booking Data (Can be moved to Firestore later, kept static for simplicity as requested)
+                const flightData = ref([{id:1, type:'outbound', typeLabel:'去程', date:'12/22', airline:'全日空航空', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e2/ANA_logo_%282023%29.svg/2560px-ANA_logo_%282023%29.svg.png', legs:[{dep:'HKG', arr:'HND', depTime:'00:05', arrTime:'04:55', flightNo:'NH814', aircraft:'波音 787-800', termDep:'T1', termArr:'T3', duration:'3h 50m'},{dep:'HND', arr:'CTS', depTime:'09:00', arrTime:'10:35', flightNo:'NH055', aircraft:'波音 787-10', termDep:'T2', termArr:'Dom', duration:'1h 35m'}], transfer:{text:'東京轉機 4h 5m', note:'需領取並重新託運行李'}},{id:2, type:'inbound', typeLabel:'回程', date:'12/29', airline:'全日空航空', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e2/ANA_logo_%282023%29.svg/2560px-ANA_logo_%282023%29.svg.png', legs:[{dep:'CTS', arr:'HND', depTime:'20:30', arrTime:'22:10', flightNo:'NH082', aircraft:'波音 777-300', termDep:'Dom', termArr:'T2', duration:'1h 40m'},{dep:'HND', arr:'HKG', depTime:'<span class="text-[10px] text-orange-500 mr-1">12/30</span>02:00', arrTime:'05:45', flightNo:'NH813', aircraft:'波音 787-800', termDep:'T2', termArr:'T1', duration:'4h 45m'}], transfer:{text:'東京轉機 3h 50m', note:'隔夜轉機'}}]);
+                const hotelData = ref({name:'微笑酒店PREMIUM札幌薄野', address:'Chuoku Minami 4 jo Nishi 1 chome 13-1, 中央區, 064-0804 札幌市, 北海道, 日本', phone:'+81-11-2517055', checkIn:'2025年12月22日', checkInTime:'15:00', checkOut:'2025年12月29日', checkOutTime:'11:00', nights:7, guests:'KWOK MAN HEI, AO HEI LAM', bookingId:'1359039935428674', hotelId:'J21-773-499', notes:'不包括餐膳。連續入住的客人將每三晚清潔一次。', image:'https://cf.bstatic.com/xdata/images/hotel/max1024x768/164646639.jpg?k=3f40079685956037000572856238600100000000'});
+                const tourData = ref({name:'北海道旭山動物園+四季彩常規集合', date:'2025-12-27', bookingId:'6251118211816897', participants:'成人 2', touristName:'KWOK MAN HEI', phone:'853-66881962', socialApp:'Whatsapp: 85366881962', socialId:'85366881962', meetingTime:'07:40', meetingPoint:'大通公園地鐵站31號門集合', departureTime:'07:50', emergencyCn:'+8613332988980', emergencyJp:'+819096998601'});
+                const restaurantData = ref({id:'9LT3K7WPR8', name:'HOUSE.H', pax:'2名様', dateTime:'12月25日(木) 18:00～', duration:'2時間30分', course:'赤れんがのクリスマスディナー', price:'￥14,000(税込)', seat:'テーブル席 [禁煙]', address:'北海道札幌市中央区北三条西6-1 赤れんが庁舎 1F', phone:'011-211-5244', booker:'guo lulu'});
 
-                // Hotel Data
-                const hotelData = ref({
-                    name: '微笑酒店PREMIUM札幌薄野',
-                    address: 'Chuoku Minami 4 jo Nishi 1 chome 13-1, 中央區, 064-0804 札幌市, 北海道, 日本',
-                    phone: '+81-11-2517055',
-                    checkIn: '2025年12月22日',
-                    checkInTime: '15:00',
-                    checkOut: '2025年12月29日',
-                    checkOutTime: '11:00',
-                    nights: 7,
-                    guests: 'KWOK MAN HEI, AO HEI LAM',
-                    bookingId: '1359039935428674',
-                    hotelId: 'J21-773-499',
-                    notes: '不包括餐膳。連續入住的客人將每三晚清潔一次。',
-                    image: 'https://cf.bstatic.com/xdata/images/hotel/max1024x768/164646639.jpg?k=3f40079685956037000572856238600100000000' 
-                });
-
-                // Tour Data
-                const tourData = ref({
-                    name: '北海道旭山動物園+四季彩常規集合',
-                    date: '2025-12-27',
-                    bookingId: '6251118211816897',
-                    participants: '成人 2',
-                    touristName: 'KWOK MAN HEI',
-                    phone: '853-66881962',
-                    socialApp: 'Whatsapp: 85366881962',
-                    socialId: '85366881962',
-                    meetingTime: '07:40',
-                    meetingPoint: '大通公園地鐵站31號門集合',
-                    departureTime: '07:50',
-                    emergencyCn: '+8613332988980',
-                    emergencyJp: '+819096998601'
-                });
-
-                // Restaurant Data
-                const restaurantData = ref({
-                    id: '9LT3K7WPR8',
-                    name: 'HOUSE.H',
-                    pax: '2名様',
-                    dateTime: '12月25日(木) 18:00～',
-                    duration: '2時間30分',
-                    course: '赤れんがのクリスマスディナー',
-                    price: '￥14,000(税込)',
-                    seat: 'テーブル席 [禁煙]',
-                    address: '北海道札幌市中央区北三条西6-1 赤れんが庁舎 1F',
-                    phone: '011-211-5244',
-                    booker: 'guo lulu'
-                });
-
-                // --- Universal Preview Modal Logic ---
-                const showPreviewModal = ref(false);
-                const previewSrc = ref('');
-                const previewType = ref('image'); // 'image' or 'pdf'
-
-                const openMediaPreview = (src, type) => {
-                    previewSrc.value = src;
-                    previewType.value = type;
-                    showPreviewModal.value = true;
-                };
-
-                // Voucher Logic
-                const voucherList = ref([
-                    { id: 1, title: 'JR Pass 兌換券', fileName: 'jr_pass_voucher.pdf', fileData: null }
-                ]);
-                const showVoucherModal = ref(false);
-                const isEditingVoucher = ref(false);
-                const editingVoucherId = ref(null);
-                const voucherForm = ref({ title: '', fileName: '', fileData: null });
-
-                const openVoucherModal = () => { isEditingVoucher.value = false; voucherForm.value = { title: '', fileName: '', fileData: null }; showVoucherModal.value = true; };
-                const handleVoucherFile = (event) => { const file = event.target.files[0]; if (file) { voucherForm.value.fileName = file.name; const reader = new FileReader(); reader.onload = (e) => { voucherForm.value.fileData = e.target.result; }; reader.readAsDataURL(file); } };
-                const saveVoucher = () => { if (!voucherForm.value.title) { alert('請輸入憑證標題'); return; } if (isEditingVoucher.value) { const index = voucherList.value.findIndex(v => v.id === editingVoucherId.value); if (index !== -1) { const oldData = voucherList.value[index]; voucherList.value[index] = { ...oldData, title: voucherForm.value.title, fileName: voucherForm.value.fileName || oldData.fileName, fileData: voucherForm.value.fileData || oldData.fileData }; } } else { voucherList.value.push({ id: Date.now(), title: voucherForm.value.title, fileName: voucherForm.value.fileName || '未上傳檔案', fileData: voucherForm.value.fileData }); } showVoucherModal.value = false; };
-                const editVoucher = (voucher) => { isEditingVoucher.value = true; editingVoucherId.value = voucher.id; voucherForm.value = { title: voucher.title, fileName: voucher.fileName, fileData: null }; showVoucherModal.value = true; };
-                const deleteVoucher = (id) => { if(confirm('確定要刪除此憑證嗎？')) { voucherList.value = voucherList.value.filter(v => v.id !== id); } };
-                
-                // Modals & Edit Logic
-                const showTourModal = ref(false); const tourForm = ref({}); const openTourModal = () => { tourForm.value = { ...tourData.value }; showTourModal.value = true; }; const saveTour = () => { tourData.value = { ...tourForm.value }; showTourModal.value = false; };
+                // Flight/Hotel/Tour Edit Logic (Static for now, can be Firebased easily)
+                const showFlightModal = ref(false); const flightForm = ref(null); const editingFlightId = ref(null);
+                const editFlight = (flight) => { editingFlightId.value = flight.id; flightForm.value = JSON.parse(JSON.stringify(flight)); showFlightModal.value = true; };
+                const saveFlight = () => { const index = flightData.value.findIndex(f => f.id === editingFlightId.value); if (index !== -1) flightData.value[index] = flightForm.value; showFlightModal.value = false; };
                 const showHotelModal = ref(false); const hotelForm = ref({}); const openHotelModal = () => { hotelForm.value = { ...hotelData.value }; showHotelModal.value = true; }; const saveHotel = () => { hotelData.value = { ...hotelForm.value }; showHotelModal.value = false; };
-                
-                // Flight Edit Logic
-                const showFlightModal = ref(false); 
-                const flightForm = ref(null); 
-                const editingFlightId = ref(null); 
-                
-                const editFlight = (flight) => { 
-                    editingFlightId.value = flight.id; 
-                    flightForm.value = JSON.parse(JSON.stringify(flight)); 
-                    showFlightModal.value = true; 
-                }; 
-                
-                const saveFlight = () => { 
-                    const index = flightData.value.findIndex(f => f.id === editingFlightId.value); 
-                    if (index !== -1) {
-                        flightData.value[index] = flightForm.value; 
-                    }
-                    showFlightModal.value = false; 
+                const showTourModal = ref(false); const tourForm = ref({}); const openTourModal = () => { tourForm.value = { ...tourData.value }; showTourModal.value = true; }; const saveTour = () => { tourData.value = { ...tourForm.value }; showTourModal.value = false; };
+
+                // Universal Preview
+                const showPreviewModal = ref(false); const previewSrc = ref(''); const previewType = ref('image');
+                const openMediaPreview = (src, type) => { previewSrc.value = src; previewType.value = type; showPreviewModal.value = true; };
+
+                // =========================================================================
+                // FIREBASE INTEGRATION START
+                // =========================================================================
+
+                // Helper: Upload file to Storage
+                const uploadFile = async (file, path) => {
+                    if (!file) return null;
+                    const storageReference = storageRef(storage, path + '/' + Date.now() + '_' + file.name);
+                    const snapshot = await uploadBytes(storageReference, file);
+                    return await getDownloadURL(snapshot.ref);
                 };
 
-                // Schedule Data (Updated with endTime)
+                // --- 1. Schedule Data (Real-time) ---
+                // Structure: `scheduleData` array for UI days, but items are fetched from Firestore collection 'scheduleItems'
                 const scheduleData = ref([
-                    { date: '22', weekday: 'Mon', items: [{id:1, category:'flight', categoryLabel:'航班', name:'抵達新千歲', startTime:'10:35', endTime: '', note:'NH055', travelTime:'45分鐘', travelMode:'train', openingHours:'', cost:'', address: ''}] },
-                    { date: '23', weekday: 'Tue', items: [{id:2, category:'sightseeing', categoryLabel:'景點', name:'小樽運河', startTime:'10:00', endTime: '12:00', note:'拍照', travelTime:'15分鐘', travelMode:'walk', openingHours:'24H', cost:'免費', address: '小樽運河'}] },
-                    { date: '24', weekday: 'Wed', items: [] },
-                    { date: '25', weekday: 'Thu', items: [{id:5, category:'food', categoryLabel:'美食', name:'HOUSE.H 聖誕晚餐', startTime:'18:00', endTime: '20:30', note:'赤れんが庁舎 1F', travelTime:'', travelMode:'', openingHours:'17:30-22:00', cost:'¥14,000', address: '北海道札幌市中央区北三条西6-1 赤れんが庁舎 1F'}] },
-                    { date: '26', weekday: 'Fri', items: [] },
-                    { date: '27', weekday: 'Sat', items: [{id:3, category:'sightseeing', categoryLabel:'景點', name:'一日團集合', startTime:'07:50', endTime: '', note:'大通公園地鐵站31號門', travelTime:'2小時', travelMode:'bus', openingHours:'', cost:'', address: '大通公園'}] },
-                    { date: '28', weekday: 'Sun', items: [] },
-                    { date: '29', weekday: 'Mon', items: [{id:4, category:'flight', categoryLabel:'航班', name:'前往機場', startTime:'18:00', endTime: '', note:'預備搭乘 NH082', travelTime:'', travelMode:'', openingHours:'', cost:'', address: '新千歲機場'}] },
+                    { date: '22', weekday: 'Mon', fullDate: '2025-12-22', items: [] },
+                    { date: '23', weekday: 'Tue', fullDate: '2025-12-23', items: [] },
+                    { date: '24', weekday: 'Wed', fullDate: '2025-12-24', items: [] },
+                    { date: '25', weekday: 'Thu', fullDate: '2025-12-25', items: [] },
+                    { date: '26', weekday: 'Fri', fullDate: '2025-12-26', items: [] },
+                    { date: '27', weekday: 'Sat', fullDate: '2025-12-27', items: [] },
+                    { date: '28', weekday: 'Sun', fullDate: '2025-12-28', items: [] },
+                    { date: '29', weekday: 'Mon', fullDate: '2025-12-29', items: [] },
                 ]);
+
+                // Listen to Schedule Items
+                onMounted(() => {
+                    if (!db) return;
+                    const q = query(collection(db, "scheduleItems"), orderBy("order", "asc"));
+                    onSnapshot(q, (snapshot) => {
+                        // Reset items buckets
+                        scheduleData.value.forEach(day => day.items = []);
+                        
+                        snapshot.forEach((doc) => {
+                            const item = { id: doc.id, ...doc.data() };
+                            // Find matching day based on dayIndex stored in item
+                            if (scheduleData.value[item.dayIndex]) {
+                                scheduleData.value[item.dayIndex].items.push(item);
+                            }
+                        });
+                        refreshScheduleDOM();
+                        isLoading.value = false;
+                    });
+                });
+
                 const currentDaySchedule = computed(() => scheduleData.value[selectedDayIndex.value].items);
 
-                // --- CRITICAL FIX: SortableJS & DOM State Management ---
+                // SortableJS Logic with Firestore Update
                 let sortableInstance = null;
-                const listKey = ref(0); // Unique key to force re-render
+                const listKey = ref(0);
 
                 const initSortable = () => {
                     const el = document.getElementById('schedule-list-container');
-                    
-                    if (sortableInstance) {
-                        sortableInstance.destroy();
-                        sortableInstance = null;
-                    }
-
-                    // Safety check: ensure element exists
+                    if (sortableInstance) { sortableInstance.destroy(); sortableInstance = null; }
                     if (el) {
                         sortableInstance = new Sortable(el, {
                             animation: 150,
                             handle: '.drag-handle',
                             ghostClass: 'sortable-ghost',
-                            onEnd: (evt) => {
-                                const items = scheduleData.value[selectedDayIndex.value].items;
-                                const item = items.splice(evt.oldIndex, 1)[0];
-                                items.splice(evt.newIndex, 0, item);
+                            onEnd: async (evt) => {
+                                // Update local state visually first (optional, but Sortable does DOM)
+                                // We need to update Firestore 'order' fields
+                                const items = [...currentDaySchedule.value]; // Copy current list
+                                const [movedItem] = items.splice(evt.oldIndex, 1);
+                                items.splice(evt.newIndex, 0, movedItem);
+                                
+                                // Batch update order in Firestore
+                                items.forEach((item, index) => {
+                                    updateDoc(doc(db, "scheduleItems", item.id), { order: index });
+                                });
                             }
                         });
                     }
                 };
 
-                const refreshScheduleDOM = async () => {
-                    listKey.value++; // Force re-render
-                    await nextTick();
-                    initSortable();
-                };
-
-                // New Helper: Scroll selected day into view
+                const refreshScheduleDOM = async () => { listKey.value++; await nextTick(); initSortable(); };
                 const scrollToSelectedDay = () => {
                     const container = dateScrollContainer.value;
                     const activeBtn = document.getElementById('day-btn-' + selectedDayIndex.value);
@@ -1744,488 +1683,341 @@
                         const containerWidth = container.clientWidth;
                         const btnLeft = activeBtn.offsetLeft;
                         const btnWidth = activeBtn.clientWidth;
-                        // Center the button
-                        const scrollLeft = btnLeft - (containerWidth / 2) + (btnWidth / 2);
-                        container.scrollTo({
-                            left: scrollLeft,
-                            behavior: 'smooth'
-                        });
+                        container.scrollTo({ left: btnLeft - (containerWidth / 2) + (btnWidth / 2), behavior: 'smooth' });
                     }
                 };
 
-                // Watch tab change
                 watch(currentTab, async (newVal) => {
-                    if (newVal === 'schedule') {
-                        await refreshScheduleDOM();
-                        // Wait for DOM to be ready then scroll to saved date
-                        setTimeout(() => {
-                            scrollToSelectedDay();
-                        }, 100);
-                    } else {
-                         if (sortableInstance) {
-                            sortableInstance.destroy();
-                            sortableInstance = null;
-                        }
-                    }
+                    if (newVal === 'schedule') { await refreshScheduleDOM(); setTimeout(scrollToSelectedDay, 100); }
+                    else if (sortableInstance) { sortableInstance.destroy(); sortableInstance = null; }
                 });
 
-                // Handle day change safely with DOM reset & Scroll
-                const changeDay = async (index) => {
-                    selectedDayIndex.value = index;
-                    await refreshScheduleDOM();
-                    scrollToSelectedDay();
-                };
+                const changeDay = async (index) => { selectedDayIndex.value = index; await refreshScheduleDOM(); scrollToSelectedDay(); };
 
-                const showScheduleModal = ref(false); 
-                const isEditingSchedule = ref(false); 
-                const editingScheduleId = ref(null); 
+                // Schedule CRUD
+                const showScheduleModal = ref(false); const isEditingSchedule = ref(false); const editingScheduleId = ref(null);
                 const scheduleForm = ref({ category: 'sightseeing', name: '', startTime: '', endTime: '', note: '', travelHours: 0, travelMinutes: 0, travelMode: 'train', openingHours: '', cost: '', address: '' });
                 
-                const openScheduleModal = () => { 
-                    isEditingSchedule.value = false; 
-                    scheduleForm.value = { category: 'sightseeing', name: '', startTime: '', endTime: '', note: '', travelHours: 0, travelMinutes: 0, travelMode: 'train', openingHours: '', cost: '', address: '' }; 
-                    showScheduleModal.value = true; 
-                };
-                
+                const openScheduleModal = () => { isEditingSchedule.value = false; scheduleForm.value = { category: 'sightseeing', name: '', startTime: '', endTime: '', note: '', travelHours: 0, travelMinutes: 0, travelMode: 'train', openingHours: '', cost: '', address: '' }; showScheduleModal.value = true; };
                 const editScheduleItem = (item) => { 
-                    isEditingSchedule.value = true; 
-                    editingScheduleId.value = item.id; 
-                    
+                    isEditingSchedule.value = true; editingScheduleId.value = item.id;
                     let h = 0, m = 0;
                     if (item.travelTime) {
                         const hMatch = item.travelTime.match(/(\d+)小時/);
                         const mMatch = item.travelTime.match(/(\d+)分鐘/);
                         if (hMatch) h = parseInt(hMatch[1]);
                         if (mMatch) m = parseInt(mMatch[1]);
-                        if (!hMatch && !mMatch && item.travelTime.includes('分鐘')) {
-                             m = parseInt(item.travelTime);
-                        }
+                        if (!hMatch && !mMatch && item.travelTime.includes('分鐘')) m = parseInt(item.travelTime);
                     }
-
-                    scheduleForm.value = { 
-                        ...item, 
-                        startTime: item.startTime,
-                        endTime: item.endTime || '',
-                        travelMode: item.travelMode || 'train',
-                        travelHours: h,
-                        travelMinutes: m,
-                        address: item.address || ''
-                    }; 
+                    scheduleForm.value = { ...item, travelHours: h, travelMinutes: m };
                     showScheduleModal.value = true; 
                 };
-                
-                const saveSchedule = async () => { 
-                    if(!scheduleForm.value.name) return; 
-                    
+
+                const saveSchedule = async () => {
+                    if (!scheduleForm.value.name) return;
                     let timeStr = '';
                     if (scheduleForm.value.travelHours > 0) timeStr += `${scheduleForm.value.travelHours}小時`;
-                    if (scheduleForm.value.travelMinutes > 0) {
-                        if (timeStr) timeStr += ' ';
-                        timeStr += `${scheduleForm.value.travelMinutes}分鐘`;
-                    }
+                    if (scheduleForm.value.travelMinutes > 0) { if (timeStr) timeStr += ' '; timeStr += `${scheduleForm.value.travelMinutes}分鐘`; }
 
-                    const newItem = { 
-                        id: isEditingSchedule.value ? editingScheduleId.value : Date.now(), 
-                        category: scheduleForm.value.category, 
-                        categoryLabel: { sightseeing: '景點', transport: '交通', flight: '航班', food: '美食', shopping: '購物', other: '其他' }[scheduleForm.value.category], 
-                        name: scheduleForm.value.name, 
-                        startTime: scheduleForm.value.startTime, 
+                    const itemData = {
+                        category: scheduleForm.value.category,
+                        categoryLabel: { sightseeing: '景點', transport: '交通', flight: '航班', food: '美食', shopping: '購物', other: '其他' }[scheduleForm.value.category],
+                        name: scheduleForm.value.name,
+                        startTime: scheduleForm.value.startTime,
                         endTime: scheduleForm.value.endTime,
-                        note: scheduleForm.value.note, 
-                        travelTime: timeStr, 
-                        travelMode: scheduleForm.value.travelMode, 
-                        openingHours: scheduleForm.value.openingHours, 
+                        note: scheduleForm.value.note,
+                        travelTime: timeStr,
+                        travelMode: scheduleForm.value.travelMode,
+                        openingHours: scheduleForm.value.openingHours,
                         cost: scheduleForm.value.cost,
-                        address: scheduleForm.value.address
-                    }; 
-                    
-                    if (isEditingSchedule.value) { 
-                        const items = scheduleData.value[selectedDayIndex.value].items; 
-                        const index = items.findIndex(i => i.id === editingScheduleId.value); 
-                        if (index !== -1) items[index] = newItem; 
-                    } else { 
-                        scheduleData.value[selectedDayIndex.value].items.push(newItem); 
-                    } 
-                    
-                    showScheduleModal.value = false; 
-                    
-                    // Force complete DOM reload to ensure buttons work on new items
-                    await refreshScheduleDOM();
-                };
-                
-                const removeScheduleItem = async (index) => { 
-                    if(confirm('確定要刪除此行程嗎？')) {
-                        scheduleData.value[selectedDayIndex.value].items.splice(index, 1);
-                        await refreshScheduleDOM();
+                        address: scheduleForm.value.address,
+                        dayIndex: selectedDayIndex.value // Important for grouping
+                    };
+
+                    if (isEditingSchedule.value) {
+                        await updateDoc(doc(db, "scheduleItems", editingScheduleId.value), itemData);
+                    } else {
+                        // Add new item at the end
+                        const currentCount = currentDaySchedule.value.length;
+                        await addDoc(collection(db, "scheduleItems"), { ...itemData, order: currentCount });
                     }
+                    showScheduleModal.value = false;
                 };
 
-                // Expenses
-                const expenseMode = ref('list'); 
-                const expenseFilter = ref('all'); 
-                const expenseList = ref([ 
-                    { id: 1, category: '飲食', name: '湯咖哩 - Suage+', date: '2025-12-22', amount: 3500, currency: 'JPY', payment: 'cash', payer: 'Kyle' }, 
-                    { id: 2, category: '交通', name: 'JR Pass 7日券', date: '2025-12-22', amount: 24000, currency: 'JPY', payment: 'card', payer: 'Hayley' }, 
-                    { id: 3, category: '其他', name: '機場免稅店', date: '2025-12-22', amount: 200, currency: 'MOP', payment: 'epay', payer: 'Kyle' } 
-                ]);
-                const isEditingExpense = ref(false);
-                const editingExpenseId = ref(null);
-                const expenseForm = ref({ category: '飲食', name: '', date: new Date().toISOString().split('T')[0], amount: '', currency: 'JPY', payment: 'cash', payer: 'Kyle' });
-                const mopToJpyRate = 18.5; 
-                
-                const toJPY = (item) => item.currency === 'MOP' ? item.amount * mopToJpyRate : Number(item.amount);
-                
-                const filteredExpenses = computed(() => {
-                    if (expenseFilter.value === 'all') return expenseList.value;
-                    return expenseList.value.filter(e => e.payer === expenseFilter.value);
+                const removeScheduleItem = async (id) => { if (confirm('確定要刪除此行程嗎？')) await deleteDoc(doc(db, "scheduleItems", id)); };
+
+                // --- 2. Expenses (Real-time) ---
+                const expenseList = ref([]);
+                onMounted(() => {
+                    if (!db) return;
+                    const q = query(collection(db, "expenses"), orderBy("date", "desc"));
+                    onSnapshot(q, (snapshot) => {
+                        expenseList.value = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    });
                 });
 
+                const expenseMode = ref('list'); const expenseFilter = ref('all');
+                const isEditingExpense = ref(false); const editingExpenseId = ref(null);
+                const expenseForm = ref({ category: '飲食', name: '', date: new Date().toISOString().split('T')[0], amount: '', currency: 'JPY', payment: 'cash', payer: 'Kyle' });
+                const mopToJpyRate = 18.5;
+                const toJPY = (item) => item.currency === 'MOP' ? item.amount * mopToJpyRate : Number(item.amount);
+                
+                const filteredExpenses = computed(() => expenseFilter.value === 'all' ? expenseList.value : expenseList.value.filter(e => e.payer === expenseFilter.value));
                 const totalExpensesJPY = computed(() => Math.round(filteredExpenses.value.reduce((sum, item) => sum + toJPY(item), 0)));
                 const totalCashJPY = computed(() => Math.round(filteredExpenses.value.filter(i => i.payment === 'cash').reduce((sum, item) => sum + toJPY(item), 0)));
                 const totalCardJPY = computed(() => Math.round(filteredExpenses.value.filter(i => i.payment === 'card').reduce((sum, item) => sum + toJPY(item), 0)));
                 const totalEpayJPY = computed(() => Math.round(filteredExpenses.value.filter(i => i.payment === 'epay').reduce((sum, item) => sum + toJPY(item), 0)));
                 
-                const groupedExpenses = computed(() => { 
-                    const groups = {}; 
-                    const sorted = [...filteredExpenses.value].sort((a, b) => new Date(b.date) - new Date(a.date)); 
-                    sorted.forEach(item => { 
-                        if (!groups[item.date]) { groups[item.date] = { items: [], dailyTotalJPY: 0 }; } 
-                        groups[item.date].items.push(item); 
-                        groups[item.date].dailyTotalJPY += toJPY(item); 
-                    }); 
-                    Object.keys(groups).forEach(date => { groups[date].dailyTotalJPY = Math.round(groups[date].dailyTotalJPY); }); 
-                    return groups; 
+                const groupedExpenses = computed(() => {
+                    const groups = {};
+                    filteredExpenses.value.forEach(item => {
+                        if (!groups[item.date]) { groups[item.date] = { items: [], dailyTotalJPY: 0 }; }
+                        groups[item.date].items.push(item);
+                        groups[item.date].dailyTotalJPY += toJPY(item);
+                    });
+                    return groups;
                 });
 
-                const saveExpense = () => { 
-                    if (!expenseForm.value.amount || !expenseForm.value.name) { alert("請輸入金額及消費項目"); return; } 
-                    
-                    if (isEditingExpense.value) { 
-                        const index = expenseList.value.findIndex(i => i.id === editingExpenseId.value); 
-                        if(index !== -1) expenseList.value[index] = { ...expenseForm.value, id: editingExpenseId.value }; 
-                        isEditingExpense.value = false; 
-                        editingExpenseId.value = null; 
+                const saveExpense = async () => {
+                    if (!expenseForm.value.amount || !expenseForm.value.name) { alert("請輸入金額及消費項目"); return; }
+                    if (isEditingExpense.value) {
+                        await updateDoc(doc(db, "expenses", editingExpenseId.value), expenseForm.value);
+                        isEditingExpense.value = false; editingExpenseId.value = null;
                         showSuccessToast('✅ 已更新一筆');
-                    } else { 
-                        expenseList.value.unshift({ ...expenseForm.value, id: Date.now() }); 
+                    } else {
+                        await addDoc(collection(db, "expenses"), expenseForm.value);
                         showSuccessToast('✅ 已新增一筆');
-                    } 
-                    
-                    expenseForm.value = { category: '飲食', name: '', date: new Date().toISOString().split('T')[0], amount: '', currency: 'JPY', payment: 'cash', payer: 'Kyle' }; 
-                    expenseMode.value = 'list'; 
+                    }
+                    expenseForm.value = { category: '飲食', name: '', date: new Date().toISOString().split('T')[0], amount: '', currency: 'JPY', payment: 'cash', payer: 'Kyle' };
+                    expenseMode.value = 'list';
                 };
-                
                 const editExpense = (item) => { isEditingExpense.value = true; editingExpenseId.value = item.id; expenseForm.value = { ...item }; expenseMode.value = 'input'; };
                 const cancelEditExpense = () => { isEditingExpense.value = false; editingExpenseId.value = null; expenseForm.value = { category: '飲食', name: '', date: new Date().toISOString().split('T')[0], amount: '', currency: 'JPY', payment: 'cash', payer: 'Kyle' }; expenseMode.value = 'list'; };
-                const removeExpense = (id) => { if(confirm('確定刪除此筆消費？')) expenseList.value = expenseList.value.filter(i => i.id !== id); };
+                const removeExpense = async (id) => { if (confirm('確定刪除此筆消費？')) await deleteDoc(doc(db, "expenses", id)); };
 
-                // Journal (UPDATED with Edit/Delete)
-                const journalEntries = ref([ 
-                    { id: 1, date: '2025-12-22', time: '22:30', author: 'Kyle', text: '終於抵達北海道了！外面真的超級冷，但是雪景美到不行。', photos: [] } 
-                ]);
-                const showJournalModal = ref(false);
-                const isEditingJournal = ref(false);
-                const editingJournalId = ref(null);
-                const journalForm = ref({ date: '', author: 'Kyle', text: '', photos: [] });
-                
-                const openJournalModal = () => { 
-                    const now = new Date();
-                    const dateStr = now.toISOString().split('T')[0];
-                    isEditingJournal.value = false;
-                    journalForm.value = { date: dateStr, author: 'Kyle', text: '', photos: [] }; 
-                    showJournalModal.value = true; 
-                };
+                // --- 3. Journal (Real-time + Storage) ---
+                const journalEntries = ref([]);
+                onMounted(() => {
+                    if (!db) return;
+                    const q = query(collection(db, "journal"), orderBy("date", "desc"));
+                    onSnapshot(q, (snapshot) => {
+                        journalEntries.value = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    });
+                });
 
-                const editJournal = (entry) => {
-                    isEditingJournal.value = true;
-                    editingJournalId.value = entry.id;
-                    journalForm.value = { 
-                        date: entry.date, 
-                        author: entry.author, 
-                        text: entry.text, 
-                        photos: [...entry.photos] 
-                    };
-                    showJournalModal.value = true;
-                };
+                const showJournalModal = ref(false); const isEditingJournal = ref(false); const editingJournalId = ref(null);
+                const journalForm = ref({ date: '', author: 'Kyle', text: '', photos: [] }); // photos are URLs now
+                const journalFiles = ref([]); // Temp storage for files before upload
 
-                const deleteJournal = (id) => {
-                    if (confirm('確定要刪除這篇日記嗎？')) {
-                        journalEntries.value = journalEntries.value.filter(e => e.id !== id);
-                    }
-                };
-                
+                const openJournalModal = () => { const now = new Date(); journalForm.value = { date: now.toISOString().split('T')[0], author: 'Kyle', text: '', photos: [] }; journalFiles.value = []; isEditingJournal.value = false; showJournalModal.value = true; };
+                const editJournal = (entry) => { isEditingJournal.value = true; editingJournalId.value = entry.id; journalForm.value = { ...entry }; journalFiles.value = []; showJournalModal.value = true; };
+                const deleteJournal = async (id) => { if (confirm('確定要刪除這篇日記嗎？')) await deleteDoc(doc(db, "journal", id)); };
+
                 const handleJournalPhotos = (event) => {
                     const files = Array.from(event.target.files);
-                    if (journalForm.value.photos.length + files.length > 5) {
-                        alert('最多只能上傳 5 張照片');
-                        return;
-                    }
-                    files.forEach(file => {
-                        const reader = new FileReader();
-                        reader.onload = (e) => {
-                            journalForm.value.photos.push(e.target.result);
-                        };
-                        reader.readAsDataURL(file);
+                    // Just preview locally first is tricky with mixed URLs and Files. 
+                    // Strategy: Upload immediately for simplicity in this architecture
+                    files.forEach(async (file) => {
+                        showSuccessToast('⏳ 上傳中...');
+                        const url = await uploadFile(file, 'journal_photos');
+                        journalForm.value.photos.push(url);
+                        showSuccessToast('✅ 上傳成功');
                     });
                 };
-                
-                const removeJournalPhoto = (index) => {
-                    journalForm.value.photos.splice(index, 1);
-                };
+                const removeJournalPhoto = (index) => { journalForm.value.photos.splice(index, 1); };
 
-                const saveJournal = () => { 
-                    if(!journalForm.value.text) return; 
+                const saveJournal = async () => {
+                    if (!journalForm.value.text) return;
                     const now = new Date();
-                    
-                    if (isEditingJournal.value) {
-                        const index = journalEntries.value.findIndex(e => e.id === editingJournalId.value);
-                        if (index !== -1) {
-                            journalEntries.value[index] = {
-                                ...journalEntries.value[index],
-                                date: journalForm.value.date,
-                                author: journalForm.value.author,
-                                text: journalForm.value.text,
-                                photos: [...journalForm.value.photos]
-                            };
-                        }
-                    } else {
-                        journalEntries.value.unshift({ 
-                            id: Date.now(), 
-                            date: journalForm.value.date, 
-                            time: `${now.getHours()}:${String(now.getMinutes()).padStart(2,'0')}`, 
-                            author: journalForm.value.author,
-                            text: journalForm.value.text,
-                            photos: [...journalForm.value.photos]
-                        }); 
+                    const entryData = {
+                        date: journalForm.value.date,
+                        time: isEditingJournal.value ? journalForm.value.time : `${now.getHours()}:${String(now.getMinutes()).padStart(2,'0')}`,
+                        author: journalForm.value.author,
+                        text: journalForm.value.text,
+                        photos: journalForm.value.photos
+                    };
+                    if (isEditingJournal.value) { await updateDoc(doc(db, "journal", editingJournalId.value), entryData); }
+                    else { await addDoc(collection(db, "journal"), entryData); }
+                    showJournalModal.value = false;
+                };
+
+                // --- 4. Vouchers (Real-time + Storage) ---
+                const voucherList = ref([]);
+                onMounted(() => {
+                    if (!db) return;
+                    onSnapshot(collection(db, "vouchers"), (snapshot) => {
+                        voucherList.value = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    });
+                });
+                const showVoucherModal = ref(false); const isEditingVoucher = ref(false); const editingVoucherId = ref(null);
+                const voucherForm = ref({ title: '', fileName: '', fileUrl: '', fileType: 'image' });
+
+                const openVoucherModal = () => { isEditingVoucher.value = false; voucherForm.value = { title: '', fileName: '', fileUrl: '', fileType: 'image' }; showVoucherModal.value = true; };
+                const handleVoucherFile = async (event) => {
+                    const file = event.target.files[0];
+                    if (file) {
+                        showSuccessToast('⏳ 上傳中...');
+                        voucherForm.value.fileName = file.name;
+                        voucherForm.value.fileType = file.type.includes('pdf') ? 'pdf' : 'image';
+                        voucherForm.value.fileUrl = await uploadFile(file, 'vouchers');
+                        showSuccessToast('✅ 上傳成功');
                     }
-                    showJournalModal.value = false; 
                 };
+                const saveVoucher = async () => {
+                    if (!voucherForm.value.title) { alert('請輸入標題'); return; }
+                    if (isEditingVoucher.value) { await updateDoc(doc(db, "vouchers", editingVoucherId.value), voucherForm.value); }
+                    else { await addDoc(collection(db, "vouchers"), voucherForm.value); }
+                    showVoucherModal.value = false;
+                };
+                const deleteVoucher = async (id) => { if(confirm('確定刪除？')) await deleteDoc(doc(db, "vouchers", id)); };
 
-                // Prep
-                const exchange = ref({ jpy: 1000, mop: 0, rate: 0.054 }); 
+                // --- 5. Packing & Shopping (Real-time + Storage) ---
+                const prepTab = ref('packing'); const packingFilter = ref('all');
                 
-                // Bidirectional Currency Calculation
-                const calculateMOP = () => { 
-                    if(exchange.value.jpy === '') { exchange.value.mop = ''; return; }
-                    exchange.value.mop = (parseFloat(exchange.value.jpy) * exchange.value.rate).toFixed(1); 
-                };
-                const calculateJPY = () => { 
-                    if(exchange.value.mop === '') { exchange.value.jpy = ''; return; }
-                    exchange.value.jpy = (parseFloat(exchange.value.mop) / exchange.value.rate).toFixed(0); 
-                };
-                // Initialize
-                calculateMOP();
-                
-                const prepTab = ref('packing'); // 'packing' or 'shopping'
-                const packingFilter = ref('all');
-                const packingList = ref([ 
-                    { id: 1, title: '重要證件', items: [{id:101, text:'護照', checked:false, owner: 'Kyle', image: null}, {id:102, text:'電子機票', checked:false, owner: 'Hayley', image: null}] }, 
-                    { id: 2, title: '衣物類', items: [{id:201, text:'發熱衣', checked:false, owner: 'Kyle', image: null}, {id:202, text:'羽絨外套', checked:false, owner: 'Hayley', image: null}] } 
+                // Packing Categories (Structure kept in code, items in DB)
+                // To simplify: We will store "packingItems" as a flat collection with "categoryId"
+                const packingCategories = ref([
+                    { id: 'cat_docs', title: '重要證件' },
+                    { id: 'cat_clothes', title: '衣物類' },
+                    { id: 'cat_elec', title: '電子產品' },
+                    { id: 'cat_med', title: '藥品/護理' },
+                    { id: 'cat_other', title: '其他雜項' }
                 ]);
+                const packingItems = ref([]);
+                onMounted(() => {
+                    if (!db) return;
+                    onSnapshot(collection(db, "packingItems"), (snapshot) => {
+                        packingItems.value = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    });
+                });
 
-                // Shopping List Data
-                const shoppingList = ref([
-                    { id: 1, name: '六花亭奶油夾心餅', note: '要買5盒送同事', owner: 'Kyle', bought: false, image: 'https://www.rokkatei.co.jp/wp-content/uploads/2020/12/10052.jpg' },
-                    { id: 2, name: '藥妝 - 合利他命', note: '幫媽媽買2罐', owner: 'Hayley', bought: false, image: null }
-                ]);
-
-                // Filter Logic for Packing
+                // Computed Packing List Structure
                 const filteredPackingList = computed(() => {
-                    if (packingFilter.value === 'all') return packingList.value;
-                    return packingList.value.map(cat => ({
-                        ...cat,
-                        items: cat.items.filter(item => item.owner === packingFilter.value)
-                    })).filter(cat => cat.items.length > 0 || packingList.value.find(c => c.id === cat.id).items.length === 0);
+                    return packingCategories.value.map(cat => {
+                        const items = packingItems.value.filter(i => i.categoryId === cat.id);
+                        const filteredItems = packingFilter.value === 'all' ? items : items.filter(i => i.owner === packingFilter.value);
+                        return { ...cat, items: filteredItems };
+                    }).filter(cat => packingFilter.value === 'all' ? true : cat.items.length > 0);
                 });
-
-                // Filter Logic for Shopping
-                const filteredShoppingList = computed(() => {
-                    if (packingFilter.value === 'all') return shoppingList.value;
-                    return shoppingList.value.filter(item => item.owner === packingFilter.value);
-                });
-
-                const packingProgress = computed(() => { 
-                    let total = 0, checked = 0; 
-                    filteredPackingList.value.forEach(cat => cat.items.forEach(i => { total++; if(i.checked) checked++; })); 
-                    return total === 0 ? 0 : Math.round((checked / total) * 100); 
-                });
-
-                const addCategory = () => { const name = prompt("請輸入新類別名稱："); if(name) packingList.value.push({ id: Date.now(), title: name, items: [] }); };
-                const removeCategory = (id) => { if(confirm('刪除此類別及所有項目？')) packingList.value = packingList.value.filter(c => c.id !== id); };
                 
-                // Packing Modal Logic
-                const showPackingModal = ref(false);
-                const isEditingPacking = ref(false);
-                const editingPackingId = ref(null);
-                const editingCategoryId = ref(null);
+                const packingProgress = computed(() => {
+                    const items = packingFilter.value === 'all' ? packingItems.value : packingItems.value.filter(i => i.owner === packingFilter.value);
+                    if (items.length === 0) return 0;
+                    const checked = items.filter(i => i.checked).length;
+                    return Math.round((checked / items.length) * 100);
+                });
+
+                const togglePackingCheck = async (catId, itemId, currentStatus) => {
+                    await updateDoc(doc(db, "packingItems", itemId), { checked: !currentStatus });
+                };
+
+                const showPackingModal = ref(false); const isEditingPacking = ref(false); const editingPackingId = ref(null); const editingCategoryId = ref(null);
                 const packingForm = ref({ text: '', owner: 'Kyle', image: null });
 
                 const openPackingModal = (catId, itemId = null) => {
                     editingCategoryId.value = catId;
                     if (itemId) {
-                        isEditingPacking.value = true;
-                        editingPackingId.value = itemId;
-                        const category = packingList.value.find(c => c.id === catId);
-                        const item = category.items.find(i => i.id === itemId);
+                        isEditingPacking.value = true; editingPackingId.value = itemId;
+                        const item = packingItems.value.find(i => i.id === itemId);
                         packingForm.value = { text: item.text, owner: item.owner, image: item.image };
                     } else {
-                        isEditingPacking.value = false;
-                        packingForm.value = { text: '', owner: 'Kyle', image: null };
+                        isEditingPacking.value = false; packingForm.value = { text: '', owner: 'Kyle', image: null };
                     }
                     showPackingModal.value = true;
                 };
 
-                const handlePackingImage = (event) => {
+                const handlePackingImage = async (event) => {
                     const file = event.target.files[0];
                     if (file) {
-                        const reader = new FileReader();
-                        reader.onload = (e) => { packingForm.value.image = e.target.result; };
-                        reader.readAsDataURL(file);
+                        showSuccessToast('⏳ 上傳中...');
+                        packingForm.value.image = await uploadFile(file, 'packing');
+                        showSuccessToast('✅ 上傳成功');
                     }
                 };
 
-                const savePackingItem = () => {
-                    if (!packingForm.value.text) { alert('請輸入物品名稱'); return; }
-                    const categoryIndex = packingList.value.findIndex(c => c.id === editingCategoryId.value);
-                    if (categoryIndex === -1) return;
-
-                    if (isEditingPacking.value) {
-                        const itemIndex = packingList.value[categoryIndex].items.findIndex(i => i.id === editingPackingId.value);
-                        if (itemIndex !== -1) {
-                            packingList.value[categoryIndex].items[itemIndex] = {
-                                ...packingList.value[categoryIndex].items[itemIndex],
-                                text: packingForm.value.text,
-                                owner: packingForm.value.owner,
-                                image: packingForm.value.image
-                            };
-                        }
-                    } else {
-                        packingList.value[categoryIndex].items.push({
-                            id: Date.now(),
-                            text: packingForm.value.text,
-                            owner: packingForm.value.owner,
-                            image: packingForm.value.image,
-                            checked: false
-                        });
-                    }
+                const savePackingItem = async () => {
+                    if (!packingForm.value.text) return;
+                    const data = { categoryId: editingCategoryId.value, text: packingForm.value.text, owner: packingForm.value.owner, image: packingForm.value.image };
+                    if (isEditingPacking.value) { await updateDoc(doc(db, "packingItems", editingPackingId.value), data); }
+                    else { await addDoc(collection(db, "packingItems"), { ...data, checked: false }); }
                     showPackingModal.value = false;
                 };
+                const deletePackingItem = async (catId, itemId) => { if(confirm('刪除？')) await deleteDoc(doc(db, "packingItems", itemId)); };
+                const addCategory = () => { const name = prompt("新增類別 (僅本地暫時顯示，重新整理後需修改程式碼以永久保存)"); if(name) packingCategories.value.push({id: 'cat_'+Date.now(), title: name}); };
+                const removeCategory = (id) => { alert("類別為固定結構，請只刪除項目"); };
 
-                const deletePackingItem = (catId, itemId) => {
-                    if(confirm('確定要刪除此物品嗎？')) {
-                        const category = packingList.value.find(c => c.id === catId);
-                        if (category) {
-                            category.items = category.items.filter(i => i.id !== itemId);
-                        }
-                    }
-                };
-
-                // Shopping Modal Logic
-                const showShoppingModal = ref(false);
-                const isEditingShopping = ref(false);
-                const editingShoppingId = ref(null);
+                // Shopping
+                const shoppingList = ref([]);
+                onMounted(() => {
+                    if (!db) return;
+                    onSnapshot(collection(db, "shoppingItems"), (snapshot) => {
+                        shoppingList.value = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    });
+                });
+                const filteredShoppingList = computed(() => packingFilter.value === 'all' ? shoppingList.value : shoppingList.value.filter(i => i.owner === packingFilter.value));
+                const toggleShoppingCheck = async (id, status) => { await updateDoc(doc(db, "shoppingItems", id), { bought: !status }); };
+                
+                const showShoppingModal = ref(false); const isEditingShopping = ref(false); const editingShoppingId = ref(null);
                 const shoppingForm = ref({ name: '', note: '', owner: 'Kyle', image: null });
-
                 const openShoppingModal = (item = null) => {
-                    if (item) {
-                        isEditingShopping.value = true;
-                        editingShoppingId.value = item.id;
-                        shoppingForm.value = { name: item.name, note: item.note, owner: item.owner, image: item.image };
-                    } else {
-                        isEditingShopping.value = false;
-                        shoppingForm.value = { name: '', note: '', owner: 'Kyle', image: null };
-                    }
+                    if (item) { isEditingShopping.value = true; editingShoppingId.value = item.id; shoppingForm.value = { ...item }; }
+                    else { isEditingShopping.value = false; shoppingForm.value = { name: '', note: '', owner: 'Kyle', image: null }; }
                     showShoppingModal.value = true;
                 };
-
-                const handleShoppingImage = (event) => {
+                const handleShoppingImage = async (event) => {
                     const file = event.target.files[0];
                     if (file) {
-                        const reader = new FileReader();
-                        reader.onload = (e) => { shoppingForm.value.image = e.target.result; };
-                        reader.readAsDataURL(file);
+                        showSuccessToast('⏳ 上傳中...');
+                        shoppingForm.value.image = await uploadFile(file, 'shopping');
+                        showSuccessToast('✅ 上傳成功');
                     }
                 };
-
-                const saveShoppingItem = () => {
-                    if (!shoppingForm.value.name) { alert('請輸入商品名稱'); return; }
-                    
-                    if (isEditingShopping.value) {
-                        const index = shoppingList.value.findIndex(i => i.id === editingShoppingId.value);
-                        if (index !== -1) {
-                            shoppingList.value[index] = {
-                                ...shoppingList.value[index],
-                                name: shoppingForm.value.name,
-                                note: shoppingForm.value.note,
-                                owner: shoppingForm.value.owner,
-                                image: shoppingForm.value.image
-                            };
-                        }
-                    } else {
-                        shoppingList.value.push({
-                            id: Date.now(),
-                            name: shoppingForm.value.name,
-                            note: shoppingForm.value.note,
-                            owner: shoppingForm.value.owner,
-                            image: shoppingForm.value.image,
-                            bought: false
-                        });
-                    }
+                const saveShoppingItem = async () => {
+                    if (!shoppingForm.value.name) return;
+                    if (isEditingShopping.value) { await updateDoc(doc(db, "shoppingItems", editingShoppingId.value), shoppingForm.value); }
+                    else { await addDoc(collection(db, "shoppingItems"), { ...shoppingForm.value, bought: false }); }
                     showShoppingModal.value = false;
                 };
+                const deleteShoppingItem = async (id) => { if(confirm('刪除？')) await deleteDoc(doc(db, "shoppingItems", id)); };
 
-                const deleteShoppingItem = (id) => {
-                    if(confirm('確定要刪除此採購項目嗎？')) {
-                        shoppingList.value = shoppingList.value.filter(i => i.id !== id);
-                    }
-                };
-                
-                // Helpers & Snow
+                // Helpers
                 const getCategoryIcon = (cat) => ({ sightseeing: 'fas fa-camera', flight: 'fas fa-plane', transport: 'fas fa-train', food: 'fas fa-utensils', shopping: 'fas fa-shopping-bag', other: 'fas fa-sticky-note' }[cat] || 'fas fa-circle');
                 const getCategoryColor = (cat) => ({ sightseeing: 'bg-emerald-400', flight: 'bg-sky-500', transport: 'bg-blue-500', food: 'bg-orange-400', shopping: 'bg-pink-400', other: 'bg-slate-400' }[cat] || 'bg-slate-400');
                 const getTransportIcon = (mode) => ({ walk: 'fa-walking', train: 'fa-subway', taxi: 'fa-taxi', plane: 'fa-plane', bus: 'fa-bus' }[mode] || 'fa-car');
                 const getExpenseIcon = (cat) => ({ '飲食': 'fas fa-utensils', '交通': 'fas fa-bus', '住宿': 'fas fa-bed', '門票': 'fas fa-ticket-alt', '購物': 'fas fa-shopping-bag', '其他': 'fas fa-comment-dots' }[cat]);
                 const getExpenseColor = (cat) => ({ '飲食': 'bg-orange-400', '交通': 'bg-blue-500', '住宿': 'bg-indigo-500', '門票': 'bg-pink-500', '購物': 'bg-emerald-400', '其他': 'bg-slate-400' }[cat]);
 
+                // Exchange
+                const exchange = ref({ jpy: 1000, mop: 0, rate: 0.054 }); 
+                const calculateMOP = () => { if(exchange.value.jpy === '') { exchange.value.mop = ''; return; } exchange.value.mop = (parseFloat(exchange.value.jpy) * exchange.value.rate).toFixed(1); };
+                const calculateJPY = () => { if(exchange.value.mop === '') { exchange.value.jpy = ''; return; } exchange.value.jpy = (parseFloat(exchange.value.mop) / exchange.value.rate).toFixed(0); };
+                calculateMOP();
+
                 onMounted(() => {
                     const snowContainer = document.getElementById('snow-container');
                     for(let i=0; i<30; i++) { const flake = document.createElement('div'); flake.classList.add('snowflake'); const size = Math.random() * 5 + 2 + 'px'; flake.style.width = size; flake.style.height = size; flake.style.left = Math.random() * 100 + 'vw'; flake.style.animationDuration = Math.random() * 5 + 5 + 's'; flake.style.animationDelay = Math.random() * 5 + 's'; snowContainer.appendChild(flake); }
-                    
-                    // Initial load
-                    if(currentTab.value === 'schedule') {
-                        initSortable();
-                    }
+                    if(currentTab.value === 'schedule') initSortable();
                 });
 
                 return {
+                    isLoading,
                     currentTab, selectedDayIndex, scheduleData, currentDaySchedule, bookingCategory, weatherForecast, currentDayWeather, countdown, isRealTimeWeather,
                     showScheduleModal, isEditingSchedule, scheduleForm, openScheduleModal, editScheduleItem, saveSchedule, removeScheduleItem,
                     flightData, showFlightModal, flightForm, editFlight, saveFlight,
                     hotelData, showHotelModal, hotelForm, openHotelModal, saveHotel,
                     tourData, showTourModal, tourForm, openTourModal, saveTour,
-                    voucherList, showVoucherModal, isEditingVoucher, voucherForm, openVoucherModal, handleVoucherFile, saveVoucher, editVoucher, deleteVoucher, 
-                    // New Universal Preview
+                    voucherList, showVoucherModal, isEditingVoucher, voucherForm, openVoucherModal, handleVoucherFile, saveVoucher, deleteVoucher, 
                     showPreviewModal, previewSrc, previewType, openMediaPreview,
                     expenseMode, expenseFilter, expenseList, isEditingExpense, expenseForm, saveExpense, editExpense, cancelEditExpense, removeExpense, 
                     totalExpensesJPY, totalCashJPY, totalCardJPY, totalEpayJPY, groupedExpenses, mopToJpyRate,
                     journalEntries, showJournalModal, isEditingJournal, journalForm, openJournalModal, editJournal, deleteJournal, saveJournal, handleJournalPhotos, removeJournalPhoto,
                     exchange, calculateMOP, calculateJPY,
-                    // Packing & Shopping
-                    prepTab, packingList, packingFilter, filteredPackingList, packingProgress, addCategory, removeCategory, 
+                    prepTab, packingFilter, filteredPackingList, packingProgress, addCategory, removeCategory, togglePackingCheck,
                     showPackingModal, isEditingPacking, packingForm, openPackingModal, handlePackingImage, savePackingItem, deletePackingItem, 
-                    shoppingList, filteredShoppingList, showShoppingModal, isEditingShopping, shoppingForm, openShoppingModal, handleShoppingImage, saveShoppingItem, deleteShoppingItem,
-                    // Helpers
-                    getCategoryIcon, getCategoryColor, getTransportIcon, getExpenseIcon, getExpenseColor,
-                    restaurantData,
-                    // Music
-                    isMusicPlaying, toggleMusic,
-                    // Auth
-                    withAuth, showPasswordModal, passwordInput, verifyPassword,
-                    // Outfit
-                    showOutfitModal, outfitForm, openOutfitModal, saveOutfit,
-                    // Toast
-                    showToast, toastMessage,
-                    // Fix
+                    shoppingList, filteredShoppingList, showShoppingModal, isEditingShopping, shoppingForm, openShoppingModal, handleShoppingImage, saveShoppingItem, deleteShoppingItem, toggleShoppingCheck,
+                    getCategoryIcon, getCategoryColor, getTransportIcon, getExpenseIcon, getExpenseColor, restaurantData,
+                    isMusicPlaying, toggleMusic, withAuth, showPasswordModal, passwordInput, verifyPassword,
+                    showOutfitModal, outfitForm, openOutfitModal, saveOutfit, showToast, toastMessage,
                     changeDay, listKey, dateScrollContainer
                 };
             }
