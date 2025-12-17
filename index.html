@@ -1626,31 +1626,117 @@
                 // --- 1. Schedule Data (Real-time) ---
                 // Structure: `scheduleData` array for UI days, but items are fetched from Firestore collection 'scheduleItems'
                 const scheduleData = ref([
-                    { date: '22', weekday: 'Mon', fullDate: '2025-12-22', items: [] },
-                    { date: '23', weekday: 'Tue', fullDate: '2025-12-23', items: [] },
-                    { date: '24', weekday: 'Wed', fullDate: '2025-12-24', items: [] },
-                    { date: '25', weekday: 'Thu', fullDate: '2025-12-25', items: [] },
-                    { date: '26', weekday: 'Fri', fullDate: '2025-12-26', items: [] },
-                    { date: '27', weekday: 'Sat', fullDate: '2025-12-27', items: [] },
-                    { date: '28', weekday: 'Sun', fullDate: '2025-12-28', items: [] },
-                    { date: '29', weekday: 'Mon', fullDate: '2025-12-29', items: [] },
+                    { 
+                        date: '22', weekday: 'Mon', fullDate: '2025-12-22', 
+                        items: [
+                            { id: 'd1_1', dayIndex: 0, category: 'flight', categoryLabel: '航班', startTime: '10:35', name: '抵達新千歲機場 (NH055)', travelMode: 'train', travelTime: '37分鐘', note: '搭乘 JR 快速機場線至札幌站，轉地鐵南北線至薄野站' },
+                            { id: 'd1_2', dayIndex: 0, category: 'transport', categoryLabel: '交通', startTime: '13:00', name: '飯店寄放行李', address: 'Smile Hotel Premium Sapporo Susukino', note: '位於薄野中心，先寄放行李' },
+                            { id: 'd1_3', dayIndex: 0, category: 'food', categoryLabel: '美食', startTime: '13:30', name: '午餐：薄野拉麵橫丁', note: '推薦 弟子屈拉麵 或 倍煎舍' },
+                            { id: 'd1_4', dayIndex: 0, category: 'other', categoryLabel: '休息', startTime: '15:00', name: '飯店 Check-in & 補眠', note: '紅眼航班補眠 2-3 小時' },
+                            { id: 'd1_5', dayIndex: 0, category: 'food', categoryLabel: '美食', startTime: '18:00', name: '晚餐：湯咖哩', note: '推薦 Suage+ 或 Garaku (5點開門，人多需排隊)' },
+                            { id: 'd1_6', dayIndex: 0, category: 'sightseeing', categoryLabel: '景點', startTime: '20:00', name: '大通公園聖誕市集 & 燈飾', travelMode: 'walk', travelTime: '10分鐘', note: '從飯店步行，感受聖誕氣氛' }
+                        ] 
+                    },
+                    { 
+                        date: '23', weekday: 'Tue', fullDate: '2025-12-23', 
+                        items: [
+                            { id: 'd2_1', dayIndex: 1, category: 'transport', categoryLabel: '交通', startTime: '09:00', name: '札幌出發 (往小樽)', travelMode: 'train', travelTime: '30分鐘', note: '搭乘 JR 函館本線' },
+                            { id: 'd2_2', dayIndex: 1, category: 'sightseeing', categoryLabel: '景點', startTime: '09:30', endTime: '10:30', name: '錢函站 (Zenibako)', note: '早晨海邊光線清透，車站旁咖啡店稍作停留' },
+                            { id: 'd2_3', dayIndex: 1, category: 'sightseeing', categoryLabel: '景點', startTime: '10:45', endTime: '11:45', name: '朝里站 (Asari)', note: '無人車站雪景與海景，避開人潮' },
+                            { id: 'd2_4', dayIndex: 1, category: 'food', categoryLabel: '美食', startTime: '12:00', name: '午餐：三角市場 / Naruto 炸雞', note: '推薦滝波食堂 或 らーめん 西や 小樽駅前店' },
+                            { id: 'd2_5', dayIndex: 1, category: 'sightseeing', categoryLabel: '景點', startTime: '13:30', endTime: '14:15', name: '船見坂', note: '慢慢散步，拍完照往下走向海邊' },
+                            { id: 'd2_6', dayIndex: 1, category: 'sightseeing', categoryLabel: '景點', startTime: '14:15', endTime: '14:45', name: '小樽運河 (日景)', note: '淺草橋或中央橋拍攝，白雪紅磚倉庫' },
+                            { id: 'd2_7', dayIndex: 1, category: 'sightseeing', categoryLabel: '景點', startTime: '15:00', endTime: '16:00', name: '色內埠頭公園', note: '下午三點準時抵達，拍攝剪影照' },
+                            { id: 'd2_8', dayIndex: 1, category: 'sightseeing', categoryLabel: '景點', startTime: '16:15', endTime: '17:15', name: '小樽運河 (夜景)', note: '藍調時刻 (Blue Hour) 與點燈' },
+                            { id: 'd2_9', dayIndex: 1, category: 'shopping', categoryLabel: '購物', startTime: '19:30', name: '狸小路', travelMode: 'train', travelTime: '40分鐘', note: '回札幌逛街、採買藥妝' }
+                        ] 
+                    },
+                    { 
+                        date: '24', weekday: 'Wed', fullDate: '2025-12-24', 
+                        items: [
+                            { id: 'd3_1', dayIndex: 2, category: 'transport', categoryLabel: '交通', startTime: '09:00', name: '前往南小樽站', travelMode: 'train', travelTime: '35分鐘', note: '注意：是在小樽的前一站下車' },
+                            { id: 'd3_2', dayIndex: 2, category: 'shopping', categoryLabel: '購物', startTime: '09:45', endTime: '11:00', name: '小樽音樂盒堂 & 蒸氣鐘', note: '剛開門人最少' },
+                            { id: 'd3_3', dayIndex: 2, category: 'food', categoryLabel: '美食', startTime: '11:00', endTime: '12:00', name: '甜點巡禮', note: 'LeTAO 起司蛋糕、北菓樓泡芙、六花亭伴手禮' },
+                            { id: 'd3_4', dayIndex: 2, category: 'food', categoryLabel: '美食', startTime: '12:00', endTime: '13:10', name: '午餐：壽司', note: '政壽司、伊勢鮨分店或海鮮丼' },
+                            { id: 'd3_5', dayIndex: 2, category: 'transport', categoryLabel: '交通', startTime: '13:40', name: '搭巴士往天狗山', note: '小樽站前巴士總站，搭乘 9號線' },
+                            { id: 'd3_6', dayIndex: 2, category: 'sightseeing', categoryLabel: '景點', startTime: '14:00', endTime: '15:30', name: '天狗山 (玩雪/觀景)', note: '戶外展望台、天狗神社' },
+                            { id: 'd3_7', dayIndex: 2, category: 'sightseeing', categoryLabel: '景點', startTime: '15:30', endTime: '17:30', name: '天狗山 (夕陽/夜景)', note: 'TENGUU CAFE 休息，欣賞三大夜景' },
+                            { id: 'd3_8', dayIndex: 2, category: 'food', categoryLabel: '美食', startTime: '18:30', name: '晚餐', note: '札幌或小樽用餐' }
+                        ] 
+                    },
+                    { 
+                        date: '25', weekday: 'Thu', fullDate: '2025-12-25', 
+                        items: [
+                            { id: 'd4_1', dayIndex: 3, category: 'food', categoryLabel: '美食', startTime: '10:00', name: '根室花丸 (抽號碼牌)', address: 'Stellar Place 6F', note: '先抽號碼牌，再去逛街' },
+                            { id: 'd4_2', dayIndex: 3, category: 'shopping', categoryLabel: '購物', startTime: '10:15', name: '札幌站逛街買禮物', note: '隨時檢查號碼牌進度' },
+                            { id: 'd4_3', dayIndex: 3, category: 'sightseeing', categoryLabel: '景點', startTime: '13:00', name: '札幌電視塔 & 天橋', travelMode: 'walk', travelTime: '20分鐘', note: '趁有陽光拍照 (30-40 mins)' },
+                            { id: 'd4_4', dayIndex: 3, category: 'sightseeing', categoryLabel: '景點', startTime: '14:00', endTime: '17:00', name: '中島公園 & Smooch Coffee', note: 'First Love 巡禮，享受雪地咖啡' },
+                            { id: 'd4_5', dayIndex: 3, category: 'food', categoryLabel: '美食', startTime: '18:00', name: '聖誕晚餐：HOUSE.H', address: '北海道札幌市中央区北三条西6-1', note: '17:50 準時報到，享用聖誕大餐' },
+                            { id: 'd4_6', dayIndex: 3, category: 'sightseeing', categoryLabel: '景點', startTime: '20:30', name: '漫步回飯店', note: '沿著站前通散步' }
+                        ] 
+                    },
+                    { 
+                        date: '26', weekday: 'Fri', fullDate: '2025-12-26', 
+                        items: [
+                            { id: 'd5_1', dayIndex: 4, category: 'other', categoryLabel: '行程', startTime: '09:00', name: '早上待定', note: '自由活動' },
+                            { id: 'd5_2', dayIndex: 4, category: 'sightseeing', categoryLabel: '景點', startTime: '12:00', name: '北海道神宮', travelMode: 'train', travelTime: '20分鐘', note: '搭地鐵參拜，神宮茶屋' },
+                            { id: 'd5_3', dayIndex: 4, category: 'sightseeing', categoryLabel: '景點', startTime: '16:00', endTime: '19:00', name: '白色戀人公園', note: '提前半小時入場，歐式童話感與點燈' },
+                            { id: 'd5_4', dayIndex: 4, category: 'food', categoryLabel: '美食', startTime: '19:30', name: '晚餐：螃蟹料理', note: '螃蟹將軍 或 冰雪之門 (需預訂)' }
+                        ] 
+                    },
+                    { 
+                        date: '27', weekday: 'Sat', fullDate: '2025-12-27', 
+                        items: [
+                            { id: 'd6_1', dayIndex: 5, category: 'transport', categoryLabel: '交通', startTime: '07:20', name: '出門前往集合點', travelMode: 'walk', travelTime: '8分鐘', note: '大通地鐵站 31 號出口集合' },
+                            { id: 'd6_2', dayIndex: 5, category: 'sightseeing', categoryLabel: '景點', startTime: '07:50', name: '一日團發車', note: '旭山動物園 (企鵝散步)、四季彩之丘 (玩雪盆)' },
+                            { id: 'd6_3', dayIndex: 5, category: 'sightseeing', categoryLabel: '景點', startTime: '14:00', name: '美瑛網美樹', note: '聖誕樹、Ken & Mary 之樹' },
+                            { id: 'd6_4', dayIndex: 5, category: 'sightseeing', categoryLabel: '景點', startTime: '16:30', name: '精靈露台 (Ningle Terrace)', note: '傍晚點燈後的小木屋群' },
+                            { id: 'd6_5', dayIndex: 5, category: 'transport', categoryLabel: '交通', startTime: '18:10', name: '解散', note: 'JR 札幌站北口解散' }
+                        ] 
+                    },
+                    { 
+                        date: '28', weekday: 'Sun', fullDate: '2025-12-28', 
+                        items: [
+                            { id: 'd7_1', dayIndex: 6, category: 'other', categoryLabel: '休息', startTime: '09:00', name: '睡懶覺 & 早餐', note: '悠閒早晨' },
+                            { id: 'd7_2', dayIndex: 6, category: 'shopping', categoryLabel: '購物', startTime: '13:00', name: '北廣島三井 Outlet Park', travelMode: 'bus', travelTime: '50分鐘', note: '札幌站直達巴士' },
+                            { id: 'd7_3', dayIndex: 6, category: 'food', categoryLabel: '美食', startTime: '19:00', name: '晚餐：和牛壽喜燒', note: '推薦 和牛 Ishizaki 或 禪 Zen' }
+                        ] 
+                    },
+                    { 
+                        date: '29', weekday: 'Mon', fullDate: '2025-12-29', 
+                        items: [
+                            { id: 'd8_1', dayIndex: 7, category: 'other', categoryLabel: '退房', startTime: '11:00', name: '退房 & 寄放行李', note: '最後補貨 (唐吉訶德、藥妝)' },
+                            { id: 'd8_2', dayIndex: 7, category: 'transport', categoryLabel: '交通', startTime: '14:30', name: '前往新千歲機場', travelMode: 'train', travelTime: '40分鐘', note: '提早出發，避免大雪延誤' },
+                            { id: 'd8_3', dayIndex: 7, category: 'sightseeing', categoryLabel: '景點', startTime: '15:30', name: '機場逛街', note: '哆啦A夢樂園、吃一幻拉麵' },
+                            { id: 'd8_4', dayIndex: 7, category: 'flight', categoryLabel: '航班', startTime: '20:30', name: '返程航班 (NH082)', note: 'CTS 起飛' }
+                        ] 
+                    },
                 ]);
 
                 // Listen to Schedule Items
                 onMounted(() => {
-                    if (!db) return;
+                    if (!db) {
+                        // If no DB is configured, we rely on the static data above.
+                        isLoading.value = false;
+                        refreshScheduleDOM();
+                        return;
+                    }
+                    
                     const q = query(collection(db, "scheduleItems"), orderBy("order", "asc"));
                     onSnapshot(q, (snapshot) => {
-                        // Reset items buckets
-                        scheduleData.value.forEach(day => day.items = []);
-                        
-                        snapshot.forEach((doc) => {
-                            const item = { id: doc.id, ...doc.data() };
-                            // Find matching day based on dayIndex stored in item
-                            if (scheduleData.value[item.dayIndex]) {
-                                scheduleData.value[item.dayIndex].items.push(item);
-                            }
-                        });
+                        // Only wipe and populate IF there is data in DB to avoid overwriting the static display for demo
+                        if (!snapshot.empty) {
+                            // Reset items buckets
+                            scheduleData.value.forEach(day => day.items = []);
+                            
+                            snapshot.forEach((doc) => {
+                                const item = { id: doc.id, ...doc.data() };
+                                // Find matching day based on dayIndex stored in item
+                                if (scheduleData.value[item.dayIndex]) {
+                                    scheduleData.value[item.dayIndex].items.push(item);
+                                }
+                            });
+                        }
                         refreshScheduleDOM();
                         isLoading.value = false;
                     });
@@ -1678,9 +1764,11 @@
                                 items.splice(evt.newIndex, 0, movedItem);
                                 
                                 // Batch update order in Firestore
-                                items.forEach((item, index) => {
-                                    updateDoc(doc(db, "scheduleItems", item.id), { order: index });
-                                });
+                                if(db) {
+                                    items.forEach((item, index) => {
+                                        updateDoc(doc(db, "scheduleItems", item.id), { order: index });
+                                    });
+                                }
                             }
                         });
                     }
@@ -1753,15 +1841,27 @@
                             dayIndex: selectedDayIndex.value // Important for grouping
                         };
 
-                        if (isEditingSchedule.value) {
-                            await updateDoc(doc(db, "scheduleItems", editingScheduleId.value), itemData);
-                            showSuccessToast('✅ 行程已更新');
+                        if(db) {
+                            if (isEditingSchedule.value) {
+                                await updateDoc(doc(db, "scheduleItems", editingScheduleId.value), itemData);
+                                showSuccessToast('✅ 行程已更新');
+                            } else {
+                                // Add new item at the end
+                                const list = currentDaySchedule.value || [];
+                                const currentCount = list.length;
+                                await addDoc(collection(db, "scheduleItems"), { ...itemData, order: currentCount });
+                                showSuccessToast('✅ 行程已新增');
+                            }
                         } else {
-                            // Add new item at the end
-                            const list = currentDaySchedule.value || [];
-                            const currentCount = list.length;
-                            await addDoc(collection(db, "scheduleItems"), { ...itemData, order: currentCount });
-                            showSuccessToast('✅ 行程已新增');
+                            // Fallback for demo mode (no DB)
+                            if (isEditingSchedule.value) {
+                                const dayIdx = selectedDayIndex.value;
+                                const itemIdx = scheduleData.value[dayIdx].items.findIndex(i => i.id === editingScheduleId.value);
+                                if(itemIdx !== -1) scheduleData.value[dayIdx].items[itemIdx] = { ...scheduleData.value[dayIdx].items[itemIdx], ...itemData };
+                            } else {
+                                scheduleData.value[selectedDayIndex.value].items.push({ id: 'temp_' + Date.now(), ...itemData });
+                            }
+                            showSuccessToast('✅ (本地) 行程已更新');
                         }
                         
                         // Force close modal
@@ -1775,7 +1875,16 @@
                     }
                 };
 
-                const removeScheduleItem = async (id) => { if (confirm('確定要刪除此行程嗎？')) await deleteDoc(doc(db, "scheduleItems", id)); };
+                const removeScheduleItem = async (id) => { 
+                    if (confirm('確定要刪除此行程嗎？')) {
+                        if(db) {
+                            await deleteDoc(doc(db, "scheduleItems", id)); 
+                        } else {
+                            const dayIdx = selectedDayIndex.value;
+                            scheduleData.value[dayIdx].items = scheduleData.value[dayIdx].items.filter(i => i.id !== id);
+                        }
+                    }
+                };
 
                 // --- 2. Expenses (Real-time) ---
                 const expenseList = ref([]);
