@@ -1222,7 +1222,10 @@
                         </div>
                     </div>
                     <div><label class="block text-xs font-bold text-slate-400 mb-1">備註</label><input v-model="scheduleForm.note" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm outline-none" placeholder="備註事項"></div>
-                    <button @click="saveSchedule" class="w-full bg-sky-500 text-white py-3 rounded-xl font-bold shadow-lg shadow-sky-200 mt-2">{{ isEditingSchedule ? '更新' : '新增' }}</button>
+                    <button @click="saveSchedule" :disabled="isSaving" class="w-full bg-sky-500 text-white py-3 rounded-xl font-bold shadow-lg shadow-sky-200 mt-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                        <span v-if="isSaving"><i class="fas fa-spinner fa-spin mr-1"></i>處理中...</span>
+                        <span v-else>{{ isEditingSchedule ? '更新' : '新增' }}</span>
+                    </button>
                 </div>
             </div>
         </div>
@@ -1705,7 +1708,8 @@
                 // Schedule CRUD
                 const showScheduleModal = ref(false); const isEditingSchedule = ref(false); const editingScheduleId = ref(null);
                 const scheduleForm = ref({ category: 'sightseeing', name: '', startTime: '', endTime: '', note: '', travelHours: 0, travelMinutes: 0, travelMode: 'train', openingHours: '', cost: '', address: '' });
-                
+                const isSaving = ref(false); // New saving state
+
                 const openScheduleModal = () => { isEditingSchedule.value = false; scheduleForm.value = { category: 'sightseeing', name: '', startTime: '', endTime: '', note: '', travelHours: 0, travelMinutes: 0, travelMode: 'train', openingHours: '', cost: '', address: '' }; showScheduleModal.value = true; };
                 const editScheduleItem = (item) => { 
                     isEditingSchedule.value = true; editingScheduleId.value = item.id;
@@ -1722,34 +1726,53 @@
                 };
 
                 const saveSchedule = async () => {
-                    if (!scheduleForm.value.name) return;
-                    let timeStr = '';
-                    if (scheduleForm.value.travelHours > 0) timeStr += `${scheduleForm.value.travelHours}小時`;
-                    if (scheduleForm.value.travelMinutes > 0) { if (timeStr) timeStr += ' '; timeStr += `${scheduleForm.value.travelMinutes}分鐘`; }
-
-                    const itemData = {
-                        category: scheduleForm.value.category,
-                        categoryLabel: { sightseeing: '景點', transport: '交通', flight: '航班', food: '美食', shopping: '購物', other: '其他' }[scheduleForm.value.category],
-                        name: scheduleForm.value.name,
-                        startTime: scheduleForm.value.startTime,
-                        endTime: scheduleForm.value.endTime,
-                        note: scheduleForm.value.note,
-                        travelTime: timeStr,
-                        travelMode: scheduleForm.value.travelMode,
-                        openingHours: scheduleForm.value.openingHours,
-                        cost: scheduleForm.value.cost,
-                        address: scheduleForm.value.address,
-                        dayIndex: selectedDayIndex.value // Important for grouping
-                    };
-
-                    if (isEditingSchedule.value) {
-                        await updateDoc(doc(db, "scheduleItems", editingScheduleId.value), itemData);
-                    } else {
-                        // Add new item at the end
-                        const currentCount = currentDaySchedule.value.length;
-                        await addDoc(collection(db, "scheduleItems"), { ...itemData, order: currentCount });
+                    if (!scheduleForm.value.name) {
+                        alert('請輸入行程名稱');
+                        return;
                     }
-                    showScheduleModal.value = false;
+
+                    isSaving.value = true; // Start loading
+
+                    try {
+                        let timeStr = '';
+                        if (scheduleForm.value.travelHours > 0) timeStr += `${scheduleForm.value.travelHours}小時`;
+                        if (scheduleForm.value.travelMinutes > 0) { if (timeStr) timeStr += ' '; timeStr += `${scheduleForm.value.travelMinutes}分鐘`; }
+
+                        const itemData = {
+                            category: scheduleForm.value.category,
+                            categoryLabel: { sightseeing: '景點', transport: '交通', flight: '航班', food: '美食', shopping: '購物', other: '其他' }[scheduleForm.value.category],
+                            name: scheduleForm.value.name,
+                            startTime: scheduleForm.value.startTime,
+                            endTime: scheduleForm.value.endTime,
+                            note: scheduleForm.value.note,
+                            travelTime: timeStr,
+                            travelMode: scheduleForm.value.travelMode,
+                            openingHours: scheduleForm.value.openingHours,
+                            cost: scheduleForm.value.cost,
+                            address: scheduleForm.value.address,
+                            dayIndex: selectedDayIndex.value // Important for grouping
+                        };
+
+                        if (isEditingSchedule.value) {
+                            await updateDoc(doc(db, "scheduleItems", editingScheduleId.value), itemData);
+                            showSuccessToast('✅ 行程已更新');
+                        } else {
+                            // Add new item at the end
+                            const list = currentDaySchedule.value || [];
+                            const currentCount = list.length;
+                            await addDoc(collection(db, "scheduleItems"), { ...itemData, order: currentCount });
+                            showSuccessToast('✅ 行程已新增');
+                        }
+                        
+                        // Force close modal
+                        showScheduleModal.value = false;
+
+                    } catch (error) {
+                        console.error("Save error:", error);
+                        alert('儲存失敗，請檢查網路連線: ' + error.message);
+                    } finally {
+                        isSaving.value = false; // Stop loading
+                    }
                 };
 
                 const removeScheduleItem = async (id) => { if (confirm('確定要刪除此行程嗎？')) await deleteDoc(doc(db, "scheduleItems", id)); };
@@ -2010,7 +2033,7 @@
                 return {
                     isLoading,
                     currentTab, selectedDayIndex, scheduleData, currentDaySchedule, bookingCategory, weatherForecast, currentDayWeather, countdown, isRealTimeWeather,
-                    showScheduleModal, isEditingSchedule, scheduleForm, openScheduleModal, editScheduleItem, saveSchedule, removeScheduleItem,
+                    showScheduleModal, isEditingSchedule, scheduleForm, openScheduleModal, editScheduleItem, saveSchedule, removeScheduleItem, isSaving,
                     flightData, showFlightModal, flightForm, editFlight, saveFlight,
                     hotelData, showHotelModal, hotelForm, openHotelModal, saveHotel,
                     tourData, showTourModal, tourForm, openTourModal, saveTour,
